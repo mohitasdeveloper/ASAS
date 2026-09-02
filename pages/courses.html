@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ASAS — Manage Courses</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <style>
+    .topbar-controls { display: flex; gap: 1rem; align-items: center; }
+    
+    .data-table { width: 100%; border-collapse: collapse; background: var(--bg-card); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .data-table th, .data-table td { padding: 1rem 1.25rem; text-align: left; border-bottom: 1px solid var(--border); }
+    .data-table th { background: rgba(26, 34, 68, 0.03); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tbody tr { transition: background 0.2s; }
+    .data-table tbody tr:hover { background: var(--bg-hover); }
+    
+    .badge { display: inline-block; padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+    .badge-active { background: rgba(62, 207, 142, 0.15); color: var(--success); }
+    .badge-inactive { background: rgba(107, 112, 137, 0.15); color: var(--text-muted); }
+
+    .action-btns { display: flex; gap: 0.5rem; justify-content: flex-end; }
+    .btn-icon { background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 0.4rem; border-radius: 6px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
+    .btn-icon:hover { background: var(--bg-input); color: var(--text-primary); }
+    .btn-icon.edit:hover { color: var(--accent); background: rgba(79, 106, 245, 0.1); }
+    .btn-icon svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* --- ENHANCED MODAL UI --- */
+    .modal-back { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+    .modal-back.open { display: flex; }
+    .modal { background: #ffffff; width: 100%; max-width: 420px; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); display: flex; flex-direction: column; overflow: hidden; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .modal-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+    .modal-title { font-family: var(--ff-display); font-size: 1.25rem; font-weight: 800; color: #111827; letter-spacing: -0.01em; }
+    .modal-close { background: none; border: none; cursor: pointer; color: #9ca3af; transition: color 0.2s; display: flex; padding: 0; }
+    .modal-close:hover { color: #374151; }
+    .modal-close svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; }
+    
+    .modal-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; }
+    
+    .field label { display: block; font-size: 0.7rem; font-weight: 700; color: #6b7280; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .field input, .field select { width: 100%; padding: 0.7rem 1rem; border: 1px solid #d1d5db; border-radius: 8px; background: #ffffff; color: #1f2937; font-family: inherit; font-size: 0.95rem; transition: all 0.2s ease; box-sizing: border-box; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+    .field input::placeholder { color: #9ca3af; }
+    .field input:focus, .field select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79, 106, 245, 0.15); }
+    
+    /* Centered Active Status Toggle */
+    .status-toggle-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.6rem; margin-top: 0.5rem; }
+    .status-toggle-label { font-size: 0.85rem; font-weight: 700; color: #111827; }
+    
+    .modal-footer { padding: 1.25rem 1.5rem; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 0.75rem; background: #ffffff; }
+    
+    .btn-modal-cancel { background: #ffffff; border: 1px solid #d1d5db; color: #4b5563; padding: 0.6rem 1.25rem; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; }
+    .btn-modal-cancel:hover { background: #f9fafb; color: #111827; }
+    .btn-modal-save { background: var(--accent); border: 1px solid var(--accent); color: #ffffff; padding: 0.6rem 1.25rem; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .btn-modal-save:hover { background: #3f55c5; border-color: #3f55c5; }
+    .btn-modal-save:disabled { opacity: 0.7; cursor: not-allowed; }
+
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    .empty-state { padding: 4rem 2rem; text-align: center; color: var(--text-muted); }
+    .empty-state svg { width: 48px; height: 48px; stroke: var(--border); fill: none; stroke-width: 1.5; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-college" id="sidebarCollege"></div>
+  <nav id="sideNav"></nav>
+  <div class="sidebar-footer">
+    <div class="theme-row">
+      <span class="theme-label"><span id="themeIcon"><svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span><span id="themeLabel">Light mode</span></span>
+      <label class="toggle-switch"><input type="checkbox" id="themeToggle"/><span class="toggle-track"></span></label>
+    </div>
+    <div class="user-pill">
+      <div class="user-avatar" id="userAvatar">?</div>
+      <div class="user-info">
+        <div class="user-name" id="userName">…</div>
+        <div class="user-role" id="userRole">admin</div>
+      </div>
+      <button class="btn-logout" id="logoutBtn" title="Sign out"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div>
+      <h1 class="page-title">Courses & Divisions</h1>
+      <p class="page-subtitle">Manage all active classes and programs</p>
+    </div>
+    <div class="topbar-controls">
+      <button class="btn btn-primary" id="btnAddCourse">
+        <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;margin-right:0.4rem;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Course
+      </button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div style="overflow-x:auto;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Course Code</th>
+            <th>Year</th>
+            <th>Program</th>
+            <th>Division</th>
+            <th>Status</th>
+            <th style="text-align:right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="6" style="text-align:center;padding:3rem;color:var(--text-muted);"><span class="spin" style="display:inline-block;width:20px;height:20px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;"></span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<div class="modal-back" id="courseModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Add Course</div>
+      <button class="modal-close" id="modalClose"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="courseId" value="">
+      
+      <div class="field">
+        <label>Course Code *</label>
+        <input type="text" id="courseCode" placeholder="e.g., SYBMS-A" required>
+      </div>
+
+      <div style="display:flex;gap:1rem;">
+        <div class="field" style="flex:1;">
+          <label>Year *</label>
+          <select id="courseYear" required>
+            <option value="">— Select —</option>
+            <option value="FY">FY</option>
+            <option value="SY">SY</option>
+            <option value="TY">TY</option>
+            <option value="Part-1">Part-1</option>
+            <option value="Part-2">Part-2</option>
+          </select>
+        </div>
+        <div class="field" style="flex:1;">
+          <label>Division</label>
+          <input type="text" id="courseDiv" placeholder="e.g., A, B, C">
+        </div>
+      </div>
+      
+      <div class="field">
+        <label>Program Name *</label>
+        <input type="text" id="courseProgram" placeholder="e.g., BMS, BAF, BBI" required>
+      </div>
+
+      <div class="status-toggle-wrapper">
+        <label class="toggle-switch">
+          <input type="checkbox" id="courseStatus" checked>
+          <span class="toggle-track"></span>
+        </label>
+        <span class="status-toggle-label">Active Status</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal-cancel" id="modalCancel">Cancel</button>
+      <button class="btn-modal-save" id="btnSaveCourse">Save Course</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+  import { requireRole } from '/js/auth/session.js';
+  import { initSidebar } from '/js/components/sidebar.js';
+  import { supabase } from '/js/config/supabase.js';
+
+  const session = await requireRole('admin');
+  initSidebar(session, 'courses');
+
+  function toast(msg, type='success') {
+    const c = document.getElementById('toast');
+    const el = document.createElement('div');
+    el.className = `toast-item ${type}`;
+    el.textContent = msg;
+    c.appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+  }
+
+  let allCourses = [];
+
+  async function loadCourses() {
+    try {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('id, course_code, year, program, division, is_active')
+        .order('program').order('year').order('division');
+
+      if (error) throw error;
+      allCourses = data || [];
+      renderTable();
+    } catch(e) {
+      toast(e.message, 'error');
+      document.getElementById('tableBody').innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--error);padding:2rem;">Failed to load courses.</td></tr>`;
+    }
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('tableBody');
+    if (allCourses.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg><br>No courses found. Add your first course to get started.</div></td></tr>`;
+      return;
+    }
+
+    // Notice: Delete button has been entirely removed from the action-btns
+    tbody.innerHTML = allCourses.map(c => `
+      <tr>
+        <td style="font-weight: 700; color: var(--accent);">${c.course_code || '—'}</td>
+        <td style="font-weight: 600; color: var(--text-primary);">${c.year}</td>
+        <td>${c.program}</td>
+        <td>${c.division || '—'}</td>
+        <td><span class="badge ${c.is_active ? 'badge-active' : 'badge-inactive'}">${c.is_active ? 'Active' : 'Inactive'}</span></td>
+        <td>
+          <div class="action-btns">
+            <button class="btn-icon edit" onclick="editCourse('${c.id}')" title="Edit Course">
+              <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  // --- Modal Logic ---
+  const modal = document.getElementById('courseModal');
+  
+  function openModal(isEdit = false) {
+    document.getElementById('modalTitle').textContent = isEdit ? 'Edit Course' : 'Add Course';
+    modal.classList.add('open');
+    document.getElementById('courseCode').focus();
+  }
+
+  function closeModal() {
+    modal.classList.remove('open');
+    document.getElementById('courseId').value = '';
+    document.getElementById('courseCode').value = '';
+    document.getElementById('courseYear').value = '';
+    document.getElementById('courseProgram').value = '';
+    document.getElementById('courseDiv').value = '';
+    document.getElementById('courseStatus').checked = true;
+  }
+
+  document.getElementById('btnAddCourse').addEventListener('click', () => openModal(false));
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  document.getElementById('modalCancel').addEventListener('click', closeModal);
+  
+  // Close on outside click
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+  // Close on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
+  });
+
+  // Global functions for inline HTML event handlers
+  window.editCourse = function(id) {
+    const c = allCourses.find(x => x.id === id);
+    if (!c) return;
+    
+    document.getElementById('courseId').value = c.id;
+    document.getElementById('courseCode').value = c.course_code || '';
+    document.getElementById('courseYear').value = c.year;
+    document.getElementById('courseProgram').value = c.program;
+    document.getElementById('courseDiv').value = c.division || '';
+    document.getElementById('courseStatus').checked = c.is_active;
+    
+    openModal(true);
+  };
+
+  // --- Save Logic ---
+  document.getElementById('btnSaveCourse').addEventListener('click', async () => {
+    const id = document.getElementById('courseId').value;
+    const course_code = document.getElementById('courseCode').value.trim();
+    const year = document.getElementById('courseYear').value;
+    const program = document.getElementById('courseProgram').value.trim();
+    const division = document.getElementById('courseDiv').value.trim();
+    const is_active = document.getElementById('courseStatus').checked;
+
+    if (!course_code || !year || !program) {
+      toast('Course Code, Year, and Program are required.', 'warn');
+      return;
+    }
+
+    const btn = document.getElementById('btnSaveCourse');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin" style="display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;margin-right:6px;"></span> Saving...';
+
+    const payload = {
+      course_code,
+      year,
+      program,
+      division: division || null,
+      is_active
+    };
+
+    try {
+      if (id) {
+        // Update
+        const { error } = await supabase.from('courses').update(payload).eq('id', id);
+        if (error) throw error;
+        toast('Course updated successfully.');
+      } else {
+        // Insert
+        const { error } = await supabase.from('courses').insert([payload]);
+        if (error) throw error;
+        toast('Course created successfully.');
+      }
+      closeModal();
+      loadCourses();
+    } catch(e) {
+      // Handle unique constraint violation gracefully
+      if (e.code === '23505') {
+        toast('A course with this code or program/division already exists.', 'error');
+      } else {
+        toast(e.message, 'error');
+      }
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Save Course';
+    }
+  });
+
+  // Init
+  loadCourses();
+</script>
+</body>
+</html>

@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ASAS — User Management</title>
+  
+  <link rel="stylesheet" href="/css/theme.css" />
+  
+  <style>
+    .tabs { display:flex; gap:.5rem; margin-bottom:1.5rem; background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:.35rem; transition: background .25s, border-color .25s; }
+    .tab { flex:1; text-align:center; padding:.6rem 1rem; border-radius:9px; font-size:.88rem; font-weight:500; cursor:pointer; border:none; background:transparent; color:var(--text-muted); transition:background .2s, color .2s; }
+    .tab.active { background:var(--accent); color:#fff; }
+    
+    .pw-wrap { position:relative; }
+    .pw-wrap input { padding-right:2.5rem; }
+    .pw-toggle { position:absolute; right:.8rem; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--text-muted); display:flex; transition:color .15s; }
+    .pw-toggle:hover { color:var(--text-primary); }
+    .pw-toggle svg { width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    
+    .msg { display:none; align-items:center; gap:.6rem; border-radius:var(--radius); padding:.7rem .9rem; font-size:.85rem; margin-bottom:1rem; }
+    .msg.visible { display:flex; }
+    .msg svg { width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+    .msg.error { background:var(--error-bg); border:1px solid rgba(224,92,107,.2); color:var(--error); }
+    .msg.success { background:rgba(62,207,142,.1); border:1px solid rgba(62,207,142,.2); color:var(--success); }
+
+    /* Toolbar Styles for Sort/Filter/Export */
+    .list-toolbar { display: flex; flex-wrap: wrap; gap: 1rem; padding: 1rem 1.5rem; background: var(--bg-card); border-bottom: 1px solid var(--border); align-items: center; justify-content: space-between; }
+    .toolbar-group { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .toolbar-input { padding: 0.4rem 0.8rem; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-body); color: var(--text-primary); font-size: 0.85rem; }
+    .btn-export { display: flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.8rem; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text-primary); font-size: 0.85rem; cursor: pointer; transition: background 0.2s; }
+    .btn-export:hover { background: var(--bg-body); }
+    .btn-export svg { width: 14px; height: 14px; }
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-college" id="sidebarCollege"></div>
+  <nav id="sideNav"></nav>
+  <div class="sidebar-footer">
+    <div class="theme-row">
+      <span class="theme-label">
+        <span id="themeIcon"><svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
+        <span id="themeLabel">Light mode</span>
+      </span>
+      <label class="toggle-switch"><input type="checkbox" id="themeToggle"/><span class="toggle-track"></span></label>
+    </div>
+    <div class="user-pill">
+      <div class="user-avatar" id="userAvatar">?</div>
+      <div class="user-info"><div class="user-name" id="userName">…</div><div class="user-role" id="userRole">admin</div></div>
+      <button class="btn-logout" id="logoutBtn" title="Sign out">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div><h1 class="page-title">User Management</h1><p class="page-subtitle">Create and manage admin, faculty, and CR accounts</p></div>
+  </div>
+  <div class="content">
+    
+    <div class="tabs">
+      <button class="tab active" data-tab="faculty">Faculty Accounts</button>
+      <button class="tab" data-tab="admin">Admin Accounts</button>
+      <button class="tab" data-tab="cr">CR Accounts</button>
+    </div>
+
+    <div id="tabFaculty">
+      <div class="card">
+        <div class="card-title"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>Create Faculty Account</div>
+        <div class="msg error" id="fErrMsg"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span id="fErrText"></span></div>
+        <div class="msg success" id="fOkMsg"><svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg><span id="fOkText"></span></div>
+        <div class="form-grid">
+          <div class="field"><label>Full Name *</label><input type="text" id="fName" placeholder="Dr. Anita Sharma" /></div>
+          <div class="field"><label>Email Address *</label><input type="email" id="fEmail" placeholder="faculty@college.edu" /></div>
+          <div class="field"><label>Employee Code *</label><input type="text" id="fEmpCode" placeholder="EMP001" /></div>
+          <div class="field"><label>Temporary Password *</label>
+            <div class="pw-wrap"><input type="password" id="fPassword" placeholder="Min 8 characters" /><button class="pw-toggle" type="button" onclick="togglePw('fPassword',this)"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+            <div class="field-hint">Faculty will change this after first login.</div>
+          </div>
+          <div class="field"><label>Faculty Type *</label>
+            <select id="fType">
+              <option value="fulltime">Full-Time</option>
+              <option value="visiting">Visiting</option>
+            </select>
+          </div>
+          <div class="field"><label>Phone</label><input type="text" id="fPhone" placeholder="+91 9876543210" /></div>
+          <div class="field"><label>Department</label><input type="text" id="fDept" placeholder="Commerce &amp; Management" /></div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:1.25rem">
+          <button class="btn btn-primary" id="createFacultyBtn">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span class="spin" id="fSpin" style="display: none;"></span>Create Faculty Account
+          </button>
+        </div>
+      </div>
+      
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="card-title" style="padding: 1.5rem 1.5rem 0.5rem;"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1"/><circle cx="3" cy="12" r="1"/><circle cx="3" cy="18" r="1"/></svg>All Faculty</div>
+        
+        <div class="list-toolbar">
+          <div class="toolbar-group">
+            <input type="text" id="searchFaculty" class="toolbar-input" placeholder="Search name or code..." />
+            <select id="filterFaculty" class="toolbar-input">
+              <option value="all">All Status</option>
+              <option value="active">Active Only</option>
+              <option value="inactive">Inactive Only</option>
+              <option value="fulltime">Full-Time Only</option>
+              <option value="visiting">Visiting Only</option>
+            </select>
+            <select id="sortFaculty" class="toolbar-input">
+              <option value="name_asc">Name (A-Z)</option>
+              <option value="name_desc">Name (Z-A)</option>
+              <option value="newest">Newest First</option>
+            </select>
+          </div>
+          <div class="toolbar-group">
+            <button class="btn-export" onclick="exportData('faculty', 'excel')">
+              <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> Excel
+            </button>
+            <button class="btn-export" onclick="exportData('faculty', 'pdf')">
+              <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15h2v4H9z"/><path d="M13 15h3v4"/><path d="M13 17h2"/></svg> PDF
+            </button>
+          </div>
+        </div>
+
+        <div class="table-wrap" style="border:none;border-radius:0;">
+          <table id="facultyTableExport">
+            <thead><tr><th>Name</th><th>Employee Code</th><th>Email</th><th>Type</th><th>Department</th><th>Status</th><th class="no-export">Actions</th></tr></thead>
+            <tbody id="facultyTableBody"><tr class="empty-row"><td colspan="7"><span class="spin" style="display:inline-block"></span> Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="tabAdmin" style="display:none">
+      <div class="card">
+        <div class="card-title"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Create Admin Account</div>
+        <div class="msg error" id="aErrMsg"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span id="aErrText"></span></div>
+        <div class="msg success" id="aOkMsg"><svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg><span id="aOkText"></span></div>
+        <div class="form-grid">
+          <div class="field"><label>Full Name *</label><input type="text" id="aName" placeholder="Admin Name" /></div>
+          <div class="field"><label>Email Address *</label><input type="email" id="aEmail" placeholder="admin@college.edu" /></div>
+          <div class="field"><label>Role *</label>
+            <select id="aRole"><option value="admin">Admin</option><option value="super_admin">Super Admin</option></select>
+          </div>
+          <div class="field"><label>Temporary Password *</label>
+            <div class="pw-wrap"><input type="password" id="aPassword" placeholder="Min 8 characters" /><button class="pw-toggle" type="button" onclick="togglePw('aPassword',this)"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:1.25rem">
+          <button class="btn btn-primary" id="createAdminBtn">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span class="spin" id="aSpin" style="display: none;"></span>Create Admin Account
+          </button>
+        </div>
+      </div>
+      
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="card-title" style="padding: 1.5rem 1.5rem 0.5rem;"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>All Admins</div>
+        
+        <div class="list-toolbar">
+          <div class="toolbar-group">
+            <input type="text" id="searchAdmin" class="toolbar-input" placeholder="Search name..." />
+            <select id="filterAdmin" class="toolbar-input">
+              <option value="all">All Status</option>
+              <option value="active">Active Only</option>
+              <option value="inactive">Inactive Only</option>
+              <option value="super_admin">Super Admins Only</option>
+            </select>
+            <select id="sortAdmin" class="toolbar-input">
+              <option value="name_asc">Name (A-Z)</option>
+              <option value="name_desc">Name (Z-A)</option>
+              <option value="newest">Newest First</option>
+            </select>
+          </div>
+          <div class="toolbar-group">
+            <button class="btn-export" onclick="exportData('admin', 'excel')">
+              <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> Excel
+            </button>
+            <button class="btn-export" onclick="exportData('admin', 'pdf')">
+              <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15h2v4H9z"/><path d="M13 15h3v4"/><path d="M13 17h2"/></svg> PDF
+            </button>
+          </div>
+        </div>
+
+        <div class="table-wrap" style="border:none;border-radius:0;">
+          <table id="adminTableExport">
+            <thead><tr><th>Name</th><th>Role</th><th>Status</th><th>Created</th><th class="no-export">Actions</th></tr></thead>
+            <tbody id="adminTableBody"><tr class="empty-row"><td colspan="5"><span class="spin" style="display:inline-block"></span> Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="tabCR" style="display:none">
+      <div class="card">
+        <div class="card-title"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Create CR Account</div>
+        <div class="msg error" id="cErrMsg"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span id="cErrText"></span></div>
+        <div class="msg success" id="cOkMsg"><svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg><span id="cOkText"></span></div>
+        <div class="form-grid">
+          <div class="field"><label>Full Name *</label><input type="text" id="cName" placeholder="Student Name" /></div>
+          <div class="field"><label>Email Address *</label><input type="email" id="cEmail" placeholder="cr@college.edu" /></div>
+          <div class="field"><label>Course *</label><select id="cCourse"><option value="">Select course...</option></select></div>
+          <div class="field"><label>Temporary Password *</label>
+            <div class="pw-wrap"><input type="password" id="cPassword" placeholder="Min 8 characters" /><button class="pw-toggle" type="button" onclick="togglePw('cPassword',this)"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:1.25rem">
+          <button class="btn btn-primary" id="createCRBtn">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span class="spin" id="cSpin" style="display: none;"></span>Create CR Account
+          </button>
+        </div>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="card-title" style="padding: 1.5rem 1.5rem 0.5rem;"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>All CRs</div>
+
+        <div class="list-toolbar">
+          <div class="toolbar-group">
+            <input type="text" id="searchCR" class="toolbar-input" placeholder="Search name..." />
+            <select id="filterCR" class="toolbar-input">
+              <option value="all">All Status</option>
+              <option value="active">Active Only</option>
+              <option value="inactive">Inactive Only</option>
+            </select>
+            <select id="sortCR" class="toolbar-input">
+              <option value="name_asc">Name (A-Z)</option>
+              <option value="name_desc">Name (Z-A)</option>
+              <option value="newest">Newest First</option>
+            </select>
+          </div>
+          <div class="toolbar-group">
+            <button class="btn-export" onclick="exportData('cr', 'excel')">
+              <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> Excel
+            </button>
+            <button class="btn-export" onclick="exportData('cr', 'pdf')">
+              <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15h2v4H9z"/><path d="M13 15h3v4"/><path d="M13 17h2"/></svg> PDF
+            </button>
+          </div>
+        </div>
+
+        <div class="table-wrap" style="border:none;border-radius:0;">
+          <table id="crTableExport">
+            <thead><tr><th>Name</th><th>Course</th><th>Status</th><th>Created</th><th class="no-export">Actions</th></tr></thead>
+            <tbody id="crTableBody"><tr class="empty-row"><td colspan="5"><span class="spin" style="display:inline-block"></span> Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div id="editAdminModal" class="card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:100; width:400px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+  <div class="card-title">Edit Admin Profile</div>
+  <input type="hidden" id="editAdminId" />
+  <div class="form-grid" style="grid-template-columns: 1fr;">
+    <div class="field"><label>Full Name</label><input type="text" id="editAdminName" /></div>
+    <div class="field"><label>Role</label>
+      <select id="editAdminRole">
+        <option value="admin">Admin</option>
+        <option value="super_admin">Super Admin</option>
+      </select>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:1.25rem">
+    <button class="btn" onclick="document.getElementById('editAdminModal').style.display='none'; document.getElementById('modalOverlay').style.display='none';">Cancel</button>
+    <button class="btn btn-primary" id="saveAdminEditBtn">Save</button>
+  </div>
+</div>
+
+<div id="editFacultyModal" class="card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:100; width:450px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+  <div class="card-title">Edit Faculty Profile</div>
+  <input type="hidden" id="editFacId" />
+  <div class="form-grid">
+    <div class="field"><label>Full Name</label><input type="text" id="editFacName" /></div>
+    <div class="field"><label>Employee Code</label><input type="text" id="editFacCode" /></div>
+    <div class="field"><label>Phone</label><input type="text" id="editFacPhone" /></div>
+    <div class="field"><label>Department</label><input type="text" id="editFacDept" /></div>
+    <div class="field" style="grid-column: span 2;"><label>Faculty Type</label>
+      <select id="editFacType">
+        <option value="fulltime">Full-Time</option>
+        <option value="visiting">Visiting</option>
+      </select>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:1.25rem">
+    <button class="btn" onclick="document.getElementById('editFacultyModal').style.display='none'; document.getElementById('modalOverlay').style.display='none';">Cancel</button>
+    <button class="btn btn-primary" id="saveFacEditBtn">Save</button>
+  </div>
+</div>
+
+<div id="editCRModal" class="card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:100; width:400px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+  <div class="card-title">Edit CR Profile</div>
+  <input type="hidden" id="editCRId" />
+  <div class="form-grid" style="grid-template-columns: 1fr;">
+    <div class="field"><label>Full Name</label><input type="text" id="editCRName" /></div>
+    <div class="field"><label>Course</label><select id="editCRCourse"></select></div>
+  </div>
+  <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:1.25rem">
+    <button class="btn" onclick="document.getElementById('editCRModal').style.display='none'; document.getElementById('modalOverlay').style.display='none';">Cancel</button>
+    <button class="btn btn-primary" id="saveCREditBtn">Save</button>
+  </div>
+</div>
+
+<div id="resetPwModal" class="card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:100; width:400px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+  <div class="card-title">Reset Password</div>
+  <input type="hidden" id="resetPwAuthId" />
+  <div class="form-grid" style="grid-template-columns: 1fr;">
+    <div class="field">
+      <label>New Password for <strong id="resetPwNameDisplay"></strong></label>
+      <input type="text" id="newPasswordInput" placeholder="Min 8 characters" />
+    </div>
+  </div>
+  <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:1.25rem">
+    <button class="btn" onclick="document.getElementById('resetPwModal').style.display='none'; document.getElementById('modalOverlay').style.display='none';">Cancel</button>
+    <button class="btn btn-warn" id="confirmResetPwBtn">Force Reset</button>
+  </div>
+</div>
+
+<div id="changeEmailModal" class="card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:100; width:400px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+  <div class="card-title">Change Email Address</div>
+  <input type="hidden" id="changeEmailAuthId" />
+  <input type="hidden" id="changeEmailUserType" />
+  <div class="form-grid" style="grid-template-columns: 1fr;">
+    <div class="field">
+      <label>New Email for <strong id="changeEmailNameDisplay"></strong></label>
+      <input type="email" id="newEmailInput" placeholder="new.email@college.edu" />
+    </div>
+  </div>
+  <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:1.25rem">
+    <button class="btn" onclick="document.getElementById('changeEmailModal').style.display='none'; document.getElementById('modalOverlay').style.display='none';">Cancel</button>
+    <button class="btn btn-primary" id="confirmChangeEmailBtn">Update Email</button>
+  </div>
+</div>
+
+<div id="modalOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); z-index:99;"></div>
+<div id="toast"></div>
+
+<script>
+function togglePw(inputId, btn) {
+  const el = document.getElementById(inputId);
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+// Global UI Export Functions (No external libraries needed)
+function exportData(type, format) {
+  const tableId = type === 'faculty' ? 'facultyTableExport' : type === 'cr' ? 'crTableExport' : 'adminTableExport';
+  const title = type === 'faculty' ? 'Faculty_List' : type === 'cr' ? 'CR_List' : 'Admin_List';
+  const table = document.getElementById(tableId);
+
+  if (format === 'excel') {
+    let csv = [];
+    const rows = table.querySelectorAll('tr');
+    for (let i = 0; i < rows.length; i++) {
+      let row = [], cols = rows[i].querySelectorAll('td, th');
+      for (let j = 0; j < cols.length; j++) {
+        if (!cols[j].classList.contains('no-export')) {
+          let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, '').replace(/(\s\s)/gm, ' ');
+          data = data.replace(/"/g, '""');
+          row.push('"' + data + '"');
+        }
+      }
+      csv.push(row.join(','));
+    }
+    const csvFile = new Blob([csv.join('\n')], {type: "text/csv"});
+    const downloadLink = document.createElement("a");
+    downloadLink.download = title + '.csv';
+    downloadLink.href = window.URL.createObjectURL(csvFile);
+    downloadLink.style.display = "none";
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+  } 
+  else if (format === 'pdf') {
+    // Generate clean print view for PDF saving
+    const printWindow = window.open('', '', 'height=600,width=800');
+    const html = `
+      <html><head><title>${title}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        h2 { text-align: center; color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f4f4f4; }
+        .no-export { display: none !important; }
+      </style>
+      </head><body>
+      <h2>${title.replace('_', ' ')}</h2>
+      ${table.outerHTML}
+      </body></html>
+    `;
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
+  }
+}
+</script>
+
+<script type="module">
+  import { requireRole } from '../js/auth/session.js';
+  import { initSidebar } from '../js/components/sidebar.js';
+  import { supabase } from '../js/config/supabase.js';
+  import { 
+    createAdmin, createFaculty, createCR, getAllAdmins, getAllFaculty, getAllCR,
+    deactivateUser, reactivateUser, updateAdminProfile, 
+    updateFacultyProfile, updateCRProfile, resetUserPassword, changeUserEmail 
+  } from '../js/modules/userManager.js';
+
+  const session = await requireRole('admin');
+  initSidebar(session, 'users');
+
+  function toast(msg, type='success') {
+    const c = document.getElementById('toast');
+    const el = document.createElement('div');
+    el.className = `toast-item ${type}`;
+    el.textContent = msg;
+    c.appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+  }
+
+  // State Management for Sorting/Filtering
+  let allFacultyData = [];
+  let allAdminData = [];
+  let allCRData = [];
+  let coursesLookup = [];
+
+  function courseLabel(c) {
+    if (!c) return '—';
+    return c.division ? `${c.year} ${c.program} ${c.division}` : `${c.year} ${c.program}`;
+  }
+
+  async function loadCoursesLookup() {
+    const { data, error } = await supabase.from('courses')
+      .select('id, year, program, division').eq('is_active', true).order('year');
+    if (error) { toast(error.message, 'error'); return; }
+    coursesLookup = data || [];
+    const opts = coursesLookup.map(c => `<option value="${c.id}">${courseLabel(c)}</option>`).join('');
+    document.getElementById('cCourse').innerHTML = `<option value="">Select course...</option>${opts}`;
+    document.getElementById('editCRCourse').innerHTML = opts;
+  }
+
+  // ── Tabs ─────────────────────────────────────────────────────────
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('tabFaculty').style.display = tab.dataset.tab === 'faculty' ? '' : 'none';
+      document.getElementById('tabAdmin').style.display   = tab.dataset.tab === 'admin'   ? '' : 'none';
+      document.getElementById('tabCR').style.display      = tab.dataset.tab === 'cr'      ? '' : 'none';
+    });
+  });
+
+  // ── Modals Handlers ───────────────────────────────────────────────
+  window.openEditAdmin = (id, name, role) => {
+    document.getElementById('editAdminId').value = id;
+    document.getElementById('editAdminName').value = name === 'null' ? '' : name;
+    document.getElementById('editAdminRole').value = role;
+    document.getElementById('modalOverlay').style.display = 'block';
+    document.getElementById('editAdminModal').style.display = 'block';
+  };
+
+  window.openEditFaculty = (id, name, code, phone, dept, type) => {
+    document.getElementById('editFacId').value = id;
+    document.getElementById('editFacName').value = name === 'null' ? '' : name;
+    document.getElementById('editFacCode').value = code === 'null' ? '' : code;
+    document.getElementById('editFacPhone').value = phone === 'null' ? '' : phone;
+    document.getElementById('editFacDept').value = dept === 'null' ? '' : dept;
+    document.getElementById('editFacType').value = type;
+    document.getElementById('modalOverlay').style.display = 'block';
+    document.getElementById('editFacultyModal').style.display = 'block';
+  };
+
+  window.openEditCR = (id, name, courseId) => {
+    document.getElementById('editCRId').value = id;
+    document.getElementById('editCRName').value = name === 'null' ? '' : name;
+    document.getElementById('editCRCourse').value = courseId;
+    document.getElementById('modalOverlay').style.display = 'block';
+    document.getElementById('editCRModal').style.display = 'block';
+  };
+
+  window.openResetPw = (authUid, name) => {
+    if (!authUid || authUid === 'null') return toast('Cannot reset: Auth UID missing for this user.', 'error');
+    document.getElementById('resetPwAuthId').value = authUid;
+    document.getElementById('resetPwNameDisplay').textContent = name;
+    document.getElementById('newPasswordInput').value = '';
+    document.getElementById('modalOverlay').style.display = 'block';
+    document.getElementById('resetPwModal').style.display = 'block';
+  };
+
+  window.openChangeEmail = (authUid, name, type) => {
+    if (!authUid || authUid === 'null') return toast('Cannot update: Auth UID missing.', 'error');
+    document.getElementById('changeEmailAuthId').value = authUid;
+    document.getElementById('changeEmailUserType').value = type;
+    document.getElementById('changeEmailNameDisplay').textContent = name;
+    document.getElementById('newEmailInput').value = '';
+    document.getElementById('modalOverlay').style.display = 'block';
+    document.getElementById('changeEmailModal').style.display = 'block';
+  };
+
+  document.getElementById('modalOverlay').addEventListener('click', () => {
+    document.querySelectorAll('.card[id$="Modal"]').forEach(el => el.style.display = 'none');
+    document.getElementById('modalOverlay').style.display = 'none';
+  });
+
+  // Save Modal Submissions
+  document.getElementById('saveAdminEditBtn').addEventListener('click', async (e) => {
+    const btn = e.target;
+    const id = document.getElementById('editAdminId').value;
+    const fullName = document.getElementById('editAdminName').value.trim();
+    const role = document.getElementById('editAdminRole').value;
+
+    if (!fullName) return toast('Name is required.', 'error');
+    btn.disabled = true; btn.textContent = 'Saving...';
+    try {
+      await updateAdminProfile(id, { fullName, role });
+      toast('Admin profile updated.');
+      document.getElementById('editAdminModal').style.display = 'none';
+      document.getElementById('modalOverlay').style.display = 'none';
+      await loadAdmins();
+    } catch(err) { toast(err.message, 'error'); } 
+    finally { btn.disabled = false; btn.textContent = 'Save'; }
+  });
+
+  document.getElementById('saveFacEditBtn').addEventListener('click', async (e) => {
+    const btn = e.target;
+    const id = document.getElementById('editFacId').value;
+    const fullName = document.getElementById('editFacName').value.trim();
+    const employeeCode = document.getElementById('editFacCode').value.trim();
+    const phone = document.getElementById('editFacPhone').value.trim();
+    const department = document.getElementById('editFacDept').value.trim();
+    const facultyType = document.getElementById('editFacType').value;
+
+    if (!fullName || !employeeCode) return toast('Name and Code are required.', 'error');
+    btn.disabled = true; btn.textContent = 'Saving...';
+    try {
+      await updateFacultyProfile(id, { fullName, employeeCode, phone, department, facultyType });
+      toast('Faculty profile updated.');
+      document.getElementById('editFacultyModal').style.display = 'none';
+      document.getElementById('modalOverlay').style.display = 'none';
+      await loadFaculty();
+    } catch(err) { toast(err.message, 'error'); } 
+    finally { btn.disabled = false; btn.textContent = 'Save'; }
+  });
+
+  document.getElementById('saveCREditBtn').addEventListener('click', async (e) => {
+    const btn = e.target;
+    const id = document.getElementById('editCRId').value;
+    const fullName = document.getElementById('editCRName').value.trim();
+    const courseId = document.getElementById('editCRCourse').value;
+
+    if (!fullName || !courseId) return toast('Name and course are required.', 'error');
+    btn.disabled = true; btn.textContent = 'Saving...';
+    try {
+      await updateCRProfile(id, { fullName, courseId });
+      toast('CR profile updated.');
+      document.getElementById('editCRModal').style.display = 'none';
+      document.getElementById('modalOverlay').style.display = 'none';
+      await loadCR();
+    } catch(err) { toast(err.message, 'error'); } 
+    finally { btn.disabled = false; btn.textContent = 'Save'; }
+  });
+
+  document.getElementById('confirmResetPwBtn').addEventListener('click', async (e) => {
+    const btn = e.target;
+    const authUid = document.getElementById('resetPwAuthId').value;
+    const password = document.getElementById('newPasswordInput').value;
+
+    if (password.length < 8) return toast('Password must be at least 8 characters.', 'error');
+    btn.disabled = true; btn.textContent = 'Resetting...';
+    try {
+      await resetUserPassword(authUid, password);
+      toast('Password forced reset successfully.');
+      document.getElementById('resetPwModal').style.display = 'none';
+      document.getElementById('modalOverlay').style.display = 'none';
+    } catch(err) { toast(err.message, 'error'); } 
+    finally { btn.disabled = false; btn.textContent = 'Force Reset'; }
+  });
+
+  document.getElementById('confirmChangeEmailBtn').addEventListener('click', async (e) => {
+    const btn = e.target;
+    const authUid = document.getElementById('changeEmailAuthId').value;
+    const userType = document.getElementById('changeEmailUserType').value;
+    const newEmail = document.getElementById('newEmailInput').value.trim();
+
+    if (!newEmail || !newEmail.includes('@')) return toast('Please enter a valid email address.', 'error');
+    btn.disabled = true; btn.textContent = 'Updating...';
+    try {
+      await changeUserEmail(authUid, newEmail, userType);
+      toast('Login email updated successfully.');
+      document.getElementById('changeEmailModal').style.display = 'none';
+      document.getElementById('modalOverlay').style.display = 'none';
+      if (userType === 'faculty') await loadFaculty();
+      if (userType === 'admin') await loadAdmins();
+      if (userType === 'cr') await loadCR();
+    } catch(err) { toast(err.message, 'error'); } 
+    finally { btn.disabled = false; btn.textContent = 'Update Email'; }
+  });
+
+
+  // ── Rendering, Sorting & Filtering ────────────────────────────────
+  
+  function processFacultyData() {
+    let data = [...allFacultyData];
+    const term = document.getElementById('searchFaculty').value.toLowerCase();
+    const filter = document.getElementById('filterFaculty').value;
+    const sort = document.getElementById('sortFaculty').value;
+
+    // Search
+    if (term) data = data.filter(r => (r.full_name||'').toLowerCase().includes(term) || (r.employee_code||'').toLowerCase().includes(term));
+    // Filter
+    if (filter === 'active') data = data.filter(r => r.is_active);
+    else if (filter === 'inactive') data = data.filter(r => !r.is_active);
+    else if (filter === 'fulltime') data = data.filter(r => r.faculty_type === 'fulltime');
+    else if (filter === 'visiting') data = data.filter(r => r.faculty_type === 'visiting');
+    // Sort (Default is Name A-Z)
+    if (sort === 'name_asc') data.sort((a,b) => (a.full_name||'').localeCompare(b.full_name||''));
+    else if (sort === 'name_desc') data.sort((a,b) => (b.full_name||'').localeCompare(a.full_name||''));
+    else if (sort === 'newest') data.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+
+    const tbody = document.getElementById('facultyTableBody');
+    if (!data.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="7">No faculty found.</td></tr>'; return; }
+    
+    tbody.innerHTML = data.map(r => `<tr>
+      <td><strong style="color:var(--text-primary)">${r.full_name}</strong></td>
+      <td style="color:var(--text-muted)">${r.employee_code}</td>
+      <td style="color:var(--text-muted)">${r.email ?? '—'}</td>
+      <td><span class="badge" style="background:${r.faculty_type==='visiting'?'rgba(245,166,35,.12)':'rgba(62,207,142,.12)'};color:${r.faculty_type==='visiting'?'var(--warn)':'var(--success)'}">${r.faculty_type==='visiting'?'Visiting':'Full-Time'}</span></td>
+      <td style="color:var(--text-muted)">${r.department ?? '—'}</td>
+      <td><span class="badge ${r.is_active ? 'badge-active' : 'badge-inactive'}">${r.is_active ? 'Active' : 'Inactive'}</span></td>
+      <td class="no-export" style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <button class="btn btn-sm" onclick="openEditFaculty('${r.id}', '${r.full_name}', '${r.employee_code}', '${r.phone || ''}', '${r.department || ''}', '${r.faculty_type}')">Edit</button>
+        <button class="btn btn-sm" style="border: 1px solid var(--border);" onclick="openResetPw('${r.supabase_uid}', '${r.full_name}')">Reset PW</button>
+        <button class="btn btn-sm" style="border: 1px solid var(--border);" onclick="openChangeEmail('${r.supabase_uid}', '${r.full_name}', 'faculty')">Email</button>
+        ${r.is_active
+          ? `<button class="btn btn-warn btn-sm" onclick="toggleFaculty('${r.id}',false)">Deactivate</button>`
+          : `<button class="btn btn-success btn-sm" onclick="toggleFaculty('${r.id}',true)">Reactivate</button>`}
+      </td>
+    </tr>`).join('');
+  }
+
+  function processAdminData() {
+    let data = [...allAdminData];
+    const term = document.getElementById('searchAdmin').value.toLowerCase();
+    const filter = document.getElementById('filterAdmin').value;
+    const sort = document.getElementById('sortAdmin').value;
+
+    // Search
+    if (term) data = data.filter(r => (r.full_name||'').toLowerCase().includes(term));
+    // Filter
+    if (filter === 'active') data = data.filter(r => r.is_active);
+    else if (filter === 'inactive') data = data.filter(r => !r.is_active);
+    else if (filter === 'super_admin') data = data.filter(r => r.role === 'super_admin');
+    // Sort (Default is Name A-Z)
+    if (sort === 'name_asc') data.sort((a,b) => (a.full_name||'').localeCompare(b.full_name||''));
+    else if (sort === 'name_desc') data.sort((a,b) => (b.full_name||'').localeCompare(a.full_name||''));
+    else if (sort === 'newest') data.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+
+    const tbody = document.getElementById('adminTableBody');
+    if (!data.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No admins found.</td></tr>'; return; }
+    
+    tbody.innerHTML = data.map(r => `<tr>
+      <td><strong style="color:var(--text-primary)">${r.full_name ?? '—'}</strong></td>
+      <td><span class="badge ${r.role === 'super_admin' ? 'badge-super' : 'badge-admin'}">${r.role}</span></td>
+      <td><span class="badge ${r.is_active ? 'badge-active' : 'badge-inactive'}">${r.is_active ? 'Active' : 'Inactive'}</span></td>
+      <td style="color:var(--text-muted);font-size:.8rem">${new Date(r.created_at).toLocaleDateString('en-IN')}</td>
+      <td class="no-export" style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+        <button class="btn btn-sm" onclick="openEditAdmin('${r.id}', '${r.full_name}', '${r.role}')">Edit</button>
+        <button class="btn btn-sm" style="border: 1px solid var(--border);" onclick="openResetPw('${r.id}', '${r.full_name}')">Reset PW</button>
+        <button class="btn btn-sm" style="border: 1px solid var(--border);" onclick="openChangeEmail('${r.id}', '${r.full_name}', 'admin')">Email</button>
+        ${r.id !== session.user.id
+          ? (r.is_active
+              ? `<button class="btn btn-warn btn-sm" onclick="toggleAdmin('${r.id}',false)">Deactivate</button>`
+              : `<button class="btn btn-success btn-sm" onclick="toggleAdmin('${r.id}',true)">Reactivate</button>`)
+          : `<span style="font-size:.78rem;color:var(--text-muted);">(You)</span>`}
+      </td>
+    </tr>`).join('');
+  }
+
+  // Attach event listeners for dynamic UI updates
+  ['searchFaculty', 'filterFaculty', 'sortFaculty'].forEach(id => 
+    document.getElementById(id).addEventListener('input', processFacultyData)
+  );
+  ['searchAdmin', 'filterAdmin', 'sortAdmin'].forEach(id => 
+    document.getElementById(id).addEventListener('input', processAdminData)
+  );
+  ['searchCR', 'filterCR', 'sortCR'].forEach(id => 
+    document.getElementById(id).addEventListener('input', processCRData)
+  );
+
+  async function loadFaculty() {
+    try {
+      allFacultyData = await getAllFaculty();
+      processFacultyData();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function loadAdmins() {
+    try {
+      allAdminData = await getAllAdmins();
+      processAdminData();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  function processCRData() {
+    let data = [...allCRData];
+    const term = document.getElementById('searchCR').value.toLowerCase();
+    const filter = document.getElementById('filterCR').value;
+    const sort = document.getElementById('sortCR').value;
+
+    if (term) data = data.filter(r => (r.full_name||'').toLowerCase().includes(term));
+    if (filter === 'active') data = data.filter(r => r.is_active);
+    else if (filter === 'inactive') data = data.filter(r => !r.is_active);
+    if (sort === 'name_asc') data.sort((a,b) => (a.full_name||'').localeCompare(b.full_name||''));
+    else if (sort === 'name_desc') data.sort((a,b) => (b.full_name||'').localeCompare(a.full_name||''));
+    else if (sort === 'newest') data.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+
+    const tbody = document.getElementById('crTableBody');
+    if (!data.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No CR accounts found.</td></tr>'; return; }
+
+    tbody.innerHTML = data.map(r => `<tr>
+      <td><strong style="color:var(--text-primary)">${r.full_name ?? '—'}</strong></td>
+      <td style="color:var(--text-muted)">${courseLabel(r.course)}</td>
+      <td><span class="badge ${r.is_active ? 'badge-active' : 'badge-inactive'}">${r.is_active ? 'Active' : 'Inactive'}</span></td>
+      <td style="color:var(--text-muted);font-size:.8rem">${new Date(r.created_at).toLocaleDateString('en-IN')}</td>
+      <td class="no-export" style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+        <button class="btn btn-sm" onclick="openEditCR('${r.id}', '${r.full_name}', '${r.course_id}')">Edit</button>
+        <button class="btn btn-sm" style="border: 1px solid var(--border);" onclick="openResetPw('${r.id}', '${r.full_name}')">Reset PW</button>
+        <button class="btn btn-sm" style="border: 1px solid var(--border);" onclick="openChangeEmail('${r.id}', '${r.full_name}', 'cr')">Email</button>
+        ${r.is_active
+          ? `<button class="btn btn-warn btn-sm" onclick="toggleCR('${r.id}',false)">Deactivate</button>`
+          : `<button class="btn btn-success btn-sm" onclick="toggleCR('${r.id}',true)">Reactivate</button>`}
+      </td>
+    </tr>`).join('');
+  }
+
+  async function loadCR() {
+    try {
+      allCRData = await getAllCR();
+      processCRData();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  window.toggleFaculty = async (id, active) => {
+    try {
+      active ? await reactivateUser('faculty', id) : await deactivateUser('faculty', id);
+      toast(active ? 'Faculty reactivated.' : 'Faculty deactivated.', active ? 'success' : 'warn');
+      await loadFaculty();
+    } catch(e) { toast(e.message, 'error'); }
+  };
+
+  window.toggleAdmin = async (id, active) => {
+    try {
+      active ? await reactivateUser('admin', id) : await deactivateUser('admin', id);
+      toast(active ? 'Admin reactivated.' : 'Admin deactivated.', active ? 'success' : 'warn');
+      await loadAdmins();
+    } catch(e) { toast(e.message, 'error'); }
+  };
+
+  window.toggleCR = async (id, active) => {
+    try {
+      active ? await reactivateUser('cr', id) : await deactivateUser('cr', id);
+      toast(active ? 'CR reactivated.' : 'CR deactivated.', active ? 'success' : 'warn');
+      await loadCR();
+    } catch(e) { toast(e.message, 'error'); }
+  };
+
+  // ── Create Forms Handlers ─────────────────────────────────────────
+  document.getElementById('createFacultyBtn').addEventListener('click', async () => {
+    document.getElementById('fErrMsg').classList.remove('visible');
+    document.getElementById('fOkMsg').classList.remove('visible');
+    const fullName = document.getElementById('fName').value.trim();
+    const email    = document.getElementById('fEmail').value.trim();
+    const empCode  = document.getElementById('fEmpCode').value.trim();
+    const password = document.getElementById('fPassword').value;
+    const phone    = document.getElementById('fPhone').value.trim();
+    const dept     = document.getElementById('fDept').value.trim();
+    const fType    = document.getElementById('fType').value;
+    
+    if (!fullName || !email || !empCode || !password) {
+      document.getElementById('fErrText').textContent = 'Full name, email, employee code and password are required.';
+      document.getElementById('fErrMsg').classList.add('visible'); return;
+    }
+    if (password.length < 8) {
+      document.getElementById('fErrText').textContent = 'Password must be at least 8 characters.';
+      document.getElementById('fErrMsg').classList.add('visible'); return;
+    }
+    
+    const btn = document.getElementById('createFacultyBtn');
+    btn.disabled = true; document.getElementById('fSpin').style.display = 'inline-block';
+    
+    try {
+      await createFaculty({ fullName, email, password, employeeCode: empCode, phone, department: dept, facultyType: fType });
+      document.getElementById('fOkText').textContent = `Faculty account created for ${fullName}.`;
+      document.getElementById('fOkMsg').classList.add('visible');
+      ['fName','fEmail','fEmpCode','fPassword','fPhone','fDept'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('fType').value = 'fulltime';
+      toast(`Faculty account created for ${fullName}.`);
+      await loadFaculty();
+    } catch(e) {
+      document.getElementById('fErrText').textContent = e.message;
+      document.getElementById('fErrMsg').classList.add('visible');
+    } finally { btn.disabled = false; document.getElementById('fSpin').style.display = 'none'; }
+  });
+
+  document.getElementById('createAdminBtn').addEventListener('click', async () => {
+    document.getElementById('aErrMsg').classList.remove('visible');
+    document.getElementById('aOkMsg').classList.remove('visible');
+    const fullName = document.getElementById('aName').value.trim();
+    const email    = document.getElementById('aEmail').value.trim();
+    const role     = document.getElementById('aRole').value;
+    const password = document.getElementById('aPassword').value;
+    
+    if (!fullName || !email || !password) {
+      document.getElementById('aErrText').textContent = 'All fields are required.';
+      document.getElementById('aErrMsg').classList.add('visible'); return;
+    }
+    if (password.length < 8) {
+      document.getElementById('aErrText').textContent = 'Password must be at least 8 characters.';
+      document.getElementById('aErrMsg').classList.add('visible'); return;
+    }
+    
+    const btn = document.getElementById('createAdminBtn');
+    btn.disabled = true; document.getElementById('aSpin').style.display = 'inline-block';
+    
+    try {
+      await createAdmin({ fullName, email, password, role });
+      document.getElementById('aOkText').textContent = `Admin account created for ${fullName}.`;
+      document.getElementById('aOkMsg').classList.add('visible');
+      ['aName','aEmail','aPassword'].forEach(id => document.getElementById(id).value = '');
+      toast(`Admin account created for ${fullName}.`);
+      await loadAdmins();
+    } catch(e) {
+      document.getElementById('aErrText').textContent = e.message;
+      document.getElementById('aErrMsg').classList.add('visible');
+    } finally { btn.disabled = false; document.getElementById('aSpin').style.display = 'none'; }
+  });
+
+  document.getElementById('createCRBtn').addEventListener('click', async () => {
+    document.getElementById('cErrMsg').classList.remove('visible');
+    document.getElementById('cOkMsg').classList.remove('visible');
+    const fullName = document.getElementById('cName').value.trim();
+    const email    = document.getElementById('cEmail').value.trim();
+    const courseId = document.getElementById('cCourse').value;
+    const password = document.getElementById('cPassword').value;
+
+    if (!fullName || !email || !courseId || !password) {
+      document.getElementById('cErrText').textContent = 'Full name, email, course and password are required.';
+      document.getElementById('cErrMsg').classList.add('visible'); return;
+    }
+    if (password.length < 8) {
+      document.getElementById('cErrText').textContent = 'Password must be at least 8 characters.';
+      document.getElementById('cErrMsg').classList.add('visible'); return;
+    }
+
+    const btn = document.getElementById('createCRBtn');
+    btn.disabled = true; document.getElementById('cSpin').style.display = 'inline-block';
+
+    try {
+      await createCR({ fullName, email, password, courseId });
+      document.getElementById('cOkText').textContent = `CR account created for ${fullName}.`;
+      document.getElementById('cOkMsg').classList.add('visible');
+      ['cName','cEmail','cPassword'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('cCourse').value = '';
+      toast(`CR account created for ${fullName}.`);
+      await loadCR();
+    } catch(e) {
+      document.getElementById('cErrText').textContent = e.message;
+      document.getElementById('cErrMsg').classList.add('visible');
+    } finally { btn.disabled = false; document.getElementById('cSpin').style.display = 'none'; }
+  });
+
+  // Initial Load
+  loadFaculty();
+  loadAdmins();
+  loadCR();
+  loadCoursesLookup();
+</script>
+</body>
+</html>

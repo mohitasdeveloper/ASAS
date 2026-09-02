@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>ASAS — Mentorship</title>
+
+  <link rel="stylesheet" href="/css/theme.css"/>
+
+  <style>
+    .filter-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+    .table-search { padding: 0.55rem 1rem; border-radius: 8px; border: 1px solid var(--border); width: 100%; min-width: 260px; background: var(--bg-input); color: var(--text-primary); outline: none; font-family: var(--ff-body); }
+    .table-search:focus { border-color: var(--accent); }
+
+    .table-wrap { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { background: rgba(127,127,200,0.04); padding: 0.85rem 1rem; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+    td { padding: 0.9rem 1rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; vertical-align: middle; color: var(--text-primary); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--bg-hover); }
+
+    .modal-back { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); z-index: 200; align-items: center; justify-content: center; padding: 1rem; }
+    .modal-back.open { display: flex; }
+    .modal { background: var(--bg-card); width: 100%; max-width: 420px; border-radius: 16px; border: 1px solid var(--border); box-shadow: var(--shadow-modal); animation: mIn 0.2s ease both; }
+    @keyframes mIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+    .modal-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .modal-title { font-family: var(--ff-display); font-size: 1.2rem; font-weight: 600; color: var(--text-primary); }
+    .modal-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.1rem; }
+    .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 0.75rem; }
+    .modal-select { width: 100%; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-primary); font-family: var(--ff-body); outline: none; }
+    .modal-select:focus { border-color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-college" id="sidebarCollege"></div>
+  <nav id="sideNav"></nav>
+  <div class="sidebar-footer">
+    <div class="theme-row">
+      <span class="theme-label"><span id="themeIcon"><svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span><span id="themeLabel">Light mode</span></span>
+      <label class="toggle-switch"><input type="checkbox" id="themeToggle"/><span class="toggle-track"></span></label>
+    </div>
+    <div class="user-pill">
+      <div class="user-avatar" id="userAvatar">?</div>
+      <div class="user-info"><div class="user-name" id="userName">…</div><div class="user-role" id="userRole">admin</div></div>
+      <button class="btn-logout" id="logoutBtn" title="Sign out"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div>
+      <h1 class="page-title">Mentorship</h1>
+      <p class="page-subtitle">Assign faculty as mentors to courses — independent of subject teaching</p>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="filter-card">
+      <input type="text" id="searchInput" class="table-search" placeholder="🔍 Search course or faculty..." />
+      <button class="btn btn-primary" id="addBtn" style="height: 38px;">+ Assign Mentor</button>
+    </div>
+
+    <div class="table-wrap">
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th>Course</th>
+            <th>Mentor (Faculty)</th>
+            <th>Status</th>
+            <th style="width:80px;text-align:right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr class="empty-row"><td colspan="4" style="text-align:center; padding: 2rem;"><span class="spin"></span> Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<div class="modal-back" id="mentorModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Assign Mentor</div>
+      <button class="btn-icon" id="modalClose" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--text-muted);">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Course *</label>
+        <select id="mCourse" class="modal-select" required><option value="">Select course...</option></select>
+      </div>
+      <div class="field">
+        <label>Faculty (Mentor) *</label>
+        <select id="mFaculty" class="modal-select" required><option value="">Select faculty...</option></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="modalCancel">Cancel</button>
+      <button class="btn btn-primary" id="modalSave">Save Assignment</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+  import { requireRole } from '/js/auth/session.js';
+  import { initSidebar } from '/js/components/sidebar.js';
+  import { supabase } from '/js/config/supabase.js';
+
+  const session = await requireRole('admin');
+  initSidebar(session, 'mentorship');
+
+  function toast(msg, type='success') {
+    const c=document.getElementById('toast');
+    const el=document.createElement('div');
+    el.className=`toast-item ${type}`; el.textContent=msg;
+    c.appendChild(el); setTimeout(()=>el.remove(),4000);
+  }
+
+  function courseLabel(c) {
+    if (!c) return '—';
+    return c.division ? `${c.year} ${c.program} ${c.division}` : `${c.year} ${c.program}`;
+  }
+
+  let mentorshipData = [];
+  let coursesData = [];
+  let facultyData = [];
+  let filteredData = [];
+
+  async function loadLookups() {
+    const [cRes, fRes] = await Promise.all([
+      supabase.from('courses').select('id, year, program, division').eq('is_active', true).order('year'),
+      supabase.from('faculty').select('id, full_name').eq('is_active', true).order('full_name'),
+    ]);
+    if (cRes.error) toast(cRes.error.message, 'error');
+    if (fRes.error) toast(fRes.error.message, 'error');
+    coursesData = cRes.data || [];
+    facultyData = fRes.data || [];
+
+    document.getElementById('mCourse').innerHTML = `<option value="">Select course...</option>` +
+      coursesData.map(c => `<option value="${c.id}">${courseLabel(c)}</option>`).join('');
+    document.getElementById('mFaculty').innerHTML = `<option value="">Select faculty...</option>` +
+      facultyData.map(f => `<option value="${f.id}">${f.full_name}</option>`).join('');
+  }
+
+  async function loadData() {
+    try {
+      const { data, error } = await supabase.from('mentorship')
+        .select('id, is_active, course:courses!course_id(id, year, program, division), faculty:faculty!faculty_id(id, full_name)')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      mentorshipData = data;
+      applyFilters();
+    } catch(e) {
+      toast(e.message, 'error');
+      document.getElementById('tableBody').innerHTML = `<tr class="empty-row"><td colspan="4" style="text-align:center; padding: 2rem; color:var(--error);">Error loading data</td></tr>`;
+    }
+  }
+
+  function applyFilters() {
+    const fSearch = document.getElementById('searchInput').value.toLowerCase();
+    filteredData = mentorshipData.filter(m => {
+      if (!fSearch) return true;
+      const hay = `${courseLabel(m.course)} ${m.faculty?.full_name || ''}`.toLowerCase();
+      return hay.includes(fSearch);
+    });
+    renderTable();
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('tableBody');
+    if (!filteredData.length) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="4" style="text-align:center; padding: 3rem; color:var(--text-muted);">No mentorship assignments yet.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = filteredData.map(m => `
+      <tr>
+        <td style="font-weight:600;">${courseLabel(m.course)}</td>
+        <td>${m.faculty?.full_name || '—'}</td>
+        <td><span class="badge ${m.is_active ? 'badge-active' : 'badge-inactive'}">${m.is_active ? 'Active' : 'Inactive'}</span></td>
+        <td style="text-align:right">
+          <button class="btn btn-ghost btn-sm remove-btn" data-id="${m.id}" title="Remove">✕</button>
+        </td>
+      </tr>
+    `).join('');
+    bindActions();
+  }
+
+  document.getElementById('searchInput').addEventListener('input', applyFilters);
+
+  function openModal() { document.getElementById('mentorModal').classList.add('open'); }
+  function closeModal() { document.getElementById('mentorModal').classList.remove('open'); }
+
+  document.getElementById('addBtn').addEventListener('click', () => {
+    document.getElementById('mCourse').value = '';
+    document.getElementById('mFaculty').value = '';
+    openModal();
+  });
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  document.getElementById('modalCancel').addEventListener('click', closeModal);
+
+  document.getElementById('modalSave').addEventListener('click', async () => {
+    const course_id = document.getElementById('mCourse').value;
+    const faculty_id = document.getElementById('mFaculty').value;
+    if (!course_id || !faculty_id) { toast('Select both a course and a faculty member', 'warn'); return; }
+
+    const btn = document.getElementById('modalSave');
+    btn.disabled = true;
+    try {
+      const { error } = await supabase.from('mentorship').insert({ course_id, faculty_id, is_active: true });
+      if (error) throw error;
+      toast('Mentor assigned successfully');
+      closeModal();
+      await loadData();
+    } catch(e) {
+      toast(e.message.includes('duplicate') ? 'This faculty is already a mentor for that course' : e.message, 'error');
+    } finally { btn.disabled = false; }
+  });
+
+  function bindActions() {
+    document.querySelectorAll('.remove-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = e.currentTarget.dataset.id;
+        if (!confirm('Remove this mentorship assignment?')) return;
+        try {
+          const { error } = await supabase.from('mentorship').delete().eq('id', id);
+          if (error) throw error;
+          toast('Assignment removed');
+          await loadData();
+        } catch(err) { toast(err.message, 'error'); }
+      });
+    });
+  }
+
+  await loadLookups();
+  await loadData();
+</script>
+</body>
+</html>

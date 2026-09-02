@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>ASAS — Daily Scheduler</title>
+  <link rel="stylesheet" href="/css/theme.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css"/>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+  <style>
+    /* Controls */
+    .controls-bar{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;flex-wrap:wrap;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.1rem 1.35rem;margin-bottom:1.25rem;transition:background .25s,border-color .25s}
+    .controls-group{display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap}
+    .btn-export { display: flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-primary); font-size: 0.85rem; cursor: pointer; transition: background 0.2s; font-weight: 500; height: 38px;}
+    .btn-export:hover { background: var(--bg-hover); }
+    .btn-export svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+    /* Stats & Legend */
+    .stat-chips { display: flex !important; flex-direction: row !important; gap: 0.65rem !important; flex-wrap: wrap !important; margin-bottom: 1.1rem !important; align-items: center !important; }
+    .stat-chip { background: var(--bg-card) !important; border: 1px solid var(--border) !important; border-radius: 10px !important; padding: 0.5rem 0.9rem !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; gap: 0.5rem !important; font-size: 0.82rem !important; width: max-content !important; flex: 0 0 auto !important; white-space: nowrap !important; transition: background .25s, border-color .25s !important; }
+    .chip-dot { width: 8px !important; height: 8px !important; border-radius: 50% !important; flex-shrink: 0 !important; display: block !important; }
+    .legend { display: flex !important; flex-direction: row !important; gap: 1.1rem !important; flex-wrap: wrap !important; margin-bottom: 1rem !important; font-size: 0.75rem !important; color: var(--text-muted) !important; align-items: center !important; }
+    .leg-item { display: flex !important; flex-direction: row !important; align-items: center !important; gap: 0.35rem !important; width: max-content !important; white-space: nowrap !important; }
+    .leg-sw { width: 12px !important; height: 12px !important; border-radius: 3px !important; border: 2px solid !important; }
+
+    .danger-bar{ background:rgba(224,92,107,.07) !important; border:1px solid rgba(224,92,107,.2) !important; border-radius:10px !important; padding:.7rem 1rem !important; display:flex !important; flex-direction: row !important; align-items:center !important; justify-content:space-between !important; gap:1rem !important; margin-bottom:1rem !important; font-size:.83rem !important; color:var(--error) !important; flex-wrap:wrap !important; }
+    
+    /* Physical Timetable Grid */
+    .tt-grid{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;overflow:hidden;min-width:700px;transition:background .25s,border-color .25s; margin-bottom: 2rem;}
+    .tt-head{display:grid;border-bottom:1px solid var(--border);background:rgba(127,127,200,.04)}
+    .th-cell{padding:.6rem .7rem;font-size:.66rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);border-right:1px solid var(--border)}
+    .th-cell:last-child{border-right:none}
+    .tt-row{display:grid;border-bottom:1px solid rgba(200,210,230,.4)}
+    [data-theme="dark"] .tt-row{border-bottom-color:rgba(37,41,53,.5)}
+    .tt-row:last-child{border-bottom:none}
+    .tt-row.is-break{background:var(--bg-input)}
+    
+    .time-cell{padding:.45rem .65rem;font-size:.7rem;color:var(--text-muted);border-right:1px solid var(--border);display:flex;flex-direction:column;justify-content:center;min-width:86px;flex-shrink:0}
+    .time-cell .tl{font-weight:700;font-size:.72rem;color:var(--text-label)}
+    .time-cell .tr{font-size:.65rem;margin-top:.05rem}
+    .break-span{padding:.38rem .7rem;font-size:.72rem;font-style:italic;color:var(--text-muted);display:flex;align-items:center;border-right:1px solid var(--border)}
+    .break-span:last-child{border-right:none}
+    
+    /* Grid Cells */
+    .lc{padding:.42rem .5rem;border-right:1px solid var(--border);min-height:66px;position:relative;transition:background .15s;cursor:pointer;display:flex;flex-direction:column;gap:.1rem}
+    .lc:last-child{border-right:none}
+    .lc:hover{background:var(--bg-hover)}
+    .lc.s-absent{background:rgba(224,92,107,.05)!important;border-left:3px solid var(--error)!important}
+    .lc.s-resolved{background:rgba(62,207,142,.08)!important;border-left:3px solid var(--success)!important}
+    .lc.s-cancelled{background:rgba(107,112,137,.08)!important;border-left:3px solid var(--text-muted)!important;opacity:.6}
+    .lc.s-warn{background:rgba(245,166,35,.1)!important;border-left:3px solid var(--warn)!important}
+    .lc.s-empty:hover{background:rgba(79,106,245,.06)}
+    
+    .lc-course{font-size:.62rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted)}
+    .lc-subject{font-size:.77rem;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .lc-faculty{font-size:.7rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .lc-badge{display:inline-block;font-size:.6rem;font-weight:700;padding:.05rem .35rem;border-radius:3px;margin-top:.1rem;width:fit-content}
+    .lc-badge.absent{background:rgba(224,92,107,.2);color:var(--error)}
+    .lc-badge.warn{background:rgba(245,166,35,.15);color:var(--warn)}
+    .lc-badge.resolved{background:rgba(62,207,142,.15);color:var(--success)}
+    .lc-badge.cancelled{background:rgba(107,112,137,.15);color:var(--text-muted)}
+    
+    .lc-add{height:100%;display:flex;align-items:center;justify-content:center;color:var(--border);transition:color .15s}
+    .lc:hover .lc-add{color:var(--accent)}
+    .lc-add svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    .grid-placeholder{padding:3.5rem;text-align:center;color:var(--text-muted);display:flex;flex-direction:column;align-items:center;gap:.75rem}
+    .grid-placeholder svg{width:36px;height:36px;stroke:var(--border);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+    
+    /* VIRTUAL SECTION UI */
+    .virtual-section { background: var(--bg-card); border-radius: 12px; border: 1px dashed var(--accent); padding: 1.25rem 1.5rem; margin-bottom: 2rem; display: none; min-width: 700px; }
+    .virtual-header { display: flex; align-items: center; gap: 0.5rem; color: var(--accent); font-size: 1.1rem; font-weight: 600; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border); margin-bottom: 1.25rem; }
+    .virtual-grid { display: flex; flex-wrap: wrap; gap: 1rem; align-items: stretch; }
+    .virtual-cell { width: 175px; min-height: 75px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-main); cursor: pointer; display: flex; flex-direction: column; justify-content: center; gap: 0.15rem; transition: all 0.2s; position: relative; }
+    .virtual-cell.filled { background: rgba(79, 106, 245, 0.05); border-color: rgba(79, 106, 245, 0.2); }
+    .virtual-cell.filled:hover { border-color: var(--accent); background: rgba(79, 106, 245, 0.08); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transform: translateY(-1px); }
+    .virtual-cell .lc-course { font-size: 0.65rem; font-weight: 800; color: var(--text-muted); }
+    .virtual-cell .lc-subject { font-size: 0.8rem; font-weight: 600; color: var(--text-primary); line-height: 1.2; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;}
+    .virtual-cell .lc-faculty { font-size: 0.7rem; color: var(--text-muted); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;}
+    .virtual-cell.empty { border: 1px dashed #cbd5e1; background: transparent; flex-direction: row; align-items: center; justify-content: center; gap: 0.5rem; color: #94a3b8; }
+    .virtual-cell.empty:hover { border-color: var(--accent); color: var(--accent); background: rgba(79, 106, 245, 0.03); }
+    .virtual-cell.empty svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
+    
+    .virtual-cell.s-absent{background:rgba(224,92,107,.05)!important;border-left:3px solid var(--error)!important}
+    .virtual-cell.s-resolved{background:rgba(62,207,142,.08)!important;border-left:3px solid var(--success)!important}
+    .virtual-cell.s-cancelled{background:rgba(107,112,137,.08)!important;border-left:3px solid var(--text-muted)!important;opacity:.6}
+    .virtual-cell.s-warn{background:rgba(245,166,35,.1)!important;border-left:3px solid var(--warn)!important}
+
+    /* --- REMARKS SECTION UI --- */
+    .remarks-section { background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border); padding: 1.25rem 1.5rem; margin-bottom: 2rem; display: none; min-width: 700px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+    .remarks-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; color: var(--text-primary); font-size: 1.1rem; font-weight: 600; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border); margin-bottom: 1.25rem; }
+    .remarks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+    .remark-card { padding: 0.85rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-main); display: flex; flex-direction: column; gap: 0.4rem; position: relative; transition: all 0.2s; }
+    .remark-card:hover { border-color: var(--text-muted); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transform: translateY(-1px); }
+    .remark-card .rm-fac { font-weight: 700; color: var(--text-primary); font-size: 0.9rem; margin-right: 20px;}
+    .remark-card .rm-time { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; display:flex; align-items:center; gap:4px; }
+    .remark-card .rm-text { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4; background: rgba(0,0,0,0.02); padding: 0.6rem; border-radius: 6px; border: 1px solid rgba(0,0,0,0.04); margin-top: 0.25rem; }
+    .btn-delete-remark { position: absolute; top: 0.75rem; right: 0.75rem; color: var(--error); cursor: pointer; background: rgba(224,92,107,.1); border: none; padding: 4px; border-radius: 4px; opacity: 0; transition: all 0.2s; display:flex; align-items:center; justify-content:center; }
+    .remark-card:hover .btn-delete-remark { opacity: 1; }
+    .btn-delete-remark:hover { background: rgba(224,92,107,.2); }
+
+    /* Modals */
+    .modal-back{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(7px);z-index:200;align-items:flex-start;justify-content:center;padding:2rem 1rem;overflow-y:auto}
+    .modal-back.open{display:flex}
+    .modal{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;width:100%;max-width:500px;margin:auto;box-shadow:var(--shadow-modal);animation:mIn .22s ease both;transition:background .25s,border-color .25s}
+    @keyframes mIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
+    
+    .modal-header{padding:1.25rem 1.5rem 1rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start}
+    .modal-title{font-family:var(--ff-display);font-size:1.2rem;color:var(--text-primary)}
+    .modal-sub{font-size:.78rem;color:var(--text-muted);margin-top:.18rem}
+    .modal-xbtn{background:none;border:none;cursor:pointer;color:var(--text-muted);padding:3px;border-radius:5px;transition:color .15s;display:flex}
+    .modal-xbtn:hover{color:var(--text-primary)}
+    .modal-xbtn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    
+    .modal-body{padding:1.1rem 1.5rem}
+    .modal-footer{padding:.9rem 1.5rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap}
+    .msec-title{font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-label);margin-bottom:.65rem}
+    .info-box{background:var(--bg-input);border:1px solid var(--border);border-radius:9px;padding:.85rem 1rem;margin-bottom:1rem;font-size:.84rem;display:grid;grid-template-columns:auto 1fr;gap:.3rem .75rem}
+    .info-lbl{color:var(--text-muted);font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+    .info-val{color:var(--text-primary)}
+    
+    .option-list{display:flex;flex-direction:column;gap:.4rem;max-height:250px;overflow-y:auto}
+    .opt-item{display:flex;align-items:center;gap:.65rem;padding:.65rem .85rem;background:var(--bg-input);border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:border-color .15s,background .15s}
+    .opt-item:hover{border-color:var(--border-focus);background:var(--bg-hover)}
+    .opt-item.selected{border-color:var(--accent);background:rgba(79,106,245,.07)}
+    .opt-radio{width:15px;height:15px;border:2px solid var(--border);border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:border-color .15s}
+    .opt-item.selected .opt-radio{border-color:var(--accent)}
+    .opt-dot{width:7px;height:7px;background:var(--accent);border-radius:50%;display:none}
+    .opt-item.selected .opt-dot{display:block}
+    .opt-text{flex:1;min-width:0}
+    .opt-subject{font-size:.86rem;font-weight:600;color:var(--text-primary)}
+    .opt-faculty{font-size:.75rem;color:var(--text-muted)}
+    
+    .opt-warns{display:flex;gap:.25rem;flex-shrink:0}
+    .warn-tag{font-size:.6rem;font-weight:700;padding:.1rem .35rem;border-radius:3px;background:rgba(245,166,35,.15);color:var(--warn)}
+    .absent-tag{background:rgba(224,92,107,.15)!important;color:var(--error)!important}
+    
+    .cancel-area{margin-top:.9rem;padding-top:.9rem;border-top:1px solid var(--border)}
+    
+    @media(max-width:768px){.sidebar{display:none}.content{padding:1rem}.topbar{padding:1rem}.controls-bar{flex-direction:column;align-items:stretch}}
+  </style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-college" id="sidebarCollege"></div>
+  <nav id="sideNav"></nav>
+  <div class="sidebar-footer">
+    <div class="theme-row">
+      <span class="theme-label"><span id="themeIcon"><svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span><span id="themeLabel">Light mode</span></span>
+      <label class="toggle-switch"><input type="checkbox" id="themeToggle"/><span class="toggle-track"></span></label>
+    </div>
+    <div class="user-pill">
+      <div class="user-avatar" id="userAvatar">?</div>
+      <div class="user-info"><div class="user-name" id="userName">…</div><div class="user-role" id="userRole">admin</div></div>
+      <button class="btn-logout" id="logoutBtn"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div><h1 class="page-title">Daily Scheduler</h1><p class="page-subtitle">Generate and manage the working schedule for any date</p></div>
+  </div>
+  <div class="content">
+    
+    <div class="controls-bar">
+      <div class="controls-group">
+        <div class="field"><label>Schedule Date</label><input type="text" id="datePicker" style="width:160px" readonly/></div>
+        <button class="btn btn-primary" id="generateBtn" style="height: 38px;">
+          <svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="23,4 23,10 17,10"/><path d="M20.49 15a9 9 0 1 1-.08-6.07"/></svg>
+          Create Schedule
+        </button>
+        <button class="btn btn-ghost" id="reloadBtn" style="display:none; height: 38px;">
+          <svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="1,4 1,10 7,10"/><path d="M3.51 15a9 9 0 1 0 .08-6.07"/></svg>
+          Reload
+        </button>
+      </div>
+
+      <div class="controls-group" style="gap: 0.75rem;">
+        <button class="btn-export" id="exportExcelBtn">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> Excel
+        </button>
+        <button class="btn-export" id="exportPdfBtn">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15h2v4H9z"/><path d="M13 15h3v4"/><path d="M13 17h2"/></svg> PDF
+        </button>
+      </div>
+    </div>
+
+    <div class="danger-bar" id="dangerBar" style="display:none">
+      <span>⚠ Schedule active for this date. Regenerating will delete all existing edits.</span>
+      <button class="btn btn-danger btn-sm" id="regenerateBtn">Delete &amp; Regenerate</button>
+    </div>
+
+    <div class="stat-chips" id="statChips" style="display:none">
+      <div class="stat-chip"><span class="chip-dot" style="background:var(--error)"></span><strong id="cntAbsent">0</strong>&nbsp;absent</div>
+      <div class="stat-chip"><span class="chip-dot" style="background:var(--warn)"></span><strong id="cntWarn">0</strong>&nbsp;double-booked</div>
+      <div class="stat-chip"><span class="chip-dot" style="background:var(--success)"></span><strong id="cntResolved">0</strong>&nbsp;resolved</div>
+      <div class="stat-chip"><span class="chip-dot" style="background:var(--text-muted)"></span><strong id="cntCancelled">0</strong>&nbsp;cancelled</div>
+      <div class="stat-chip"><span class="chip-dot" style="background:var(--accent)"></span><strong id="cntTotal">0</strong>&nbsp;total</div>
+    </div>
+
+    <div class="legend" id="legendRow" style="display:none">
+      <div class="leg-item"><div class="leg-sw" style="background:rgba(224,92,107,.12);border-color:var(--error)"></div>Faculty absent</div>
+      <div class="leg-item"><div class="leg-sw" style="background:rgba(245,166,35,.1);border-color:var(--warn)"></div>Double-booked</div>
+      <div class="leg-item"><div class="leg-sw" style="background:rgba(62,207,142,.08);border-color:var(--success)"></div>Resolved</div>
+      <div class="leg-item"><div class="leg-sw" style="background:rgba(107,112,137,.08);border-color:var(--text-muted)"></div>Cancelled</div>
+      <div class="leg-item"><div class="leg-sw" style="background:var(--bg-card);border-color:var(--border)"></div>Normal</div>
+    </div>
+
+    <div style="overflow-x:auto">
+        <div id="gridContainer">
+            <div class="tt-grid"><div class="grid-placeholder">
+                <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <div>Pick a date and click <strong>Create Schedule</strong></div>
+            </div></div>
+        </div>
+    </div>
+<br>
+    <!-- Virtual Section -->
+    <div class="virtual-section" id="virtualSection">
+        <div class="virtual-header">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+            Virtual lecture
+        </div>
+        <div id="virtualGrid" class="virtual-grid"></div>
+    </div>
+
+    <!-- Remarks Section -->
+    <div class="remarks-section" id="remarksSection">
+        <div class="remarks-header">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                Faculty Remarks & Extra Activities
+            </div>
+            <button class="btn btn-primary btn-sm" id="btnAddRemark" style="height: 32px; font-size: 0.75rem;">
+                <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2;margin-right:4px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Remark
+            </button>
+        </div>
+        <div id="remarksGrid" class="remarks-grid"></div>
+    </div>
+
+  </div>
+</main>
+
+<!-- Cell Modal -->
+<div class="modal-back" id="cellModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div><div class="modal-title" id="modalTitle">Edit Slot</div><div class="modal-sub" id="modalSub"></div></div>
+      <button class="modal-xbtn" id="modalX"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div id="infoSection"><div class="msec-title">Current Lecture</div><div class="info-box" id="infoBox"></div></div>
+      <div id="replSection" style="display:none">
+        <div class="msec-title" id="replTitle">Assign Replacement</div>
+        <div id="coursePickWrap" style="display:none;margin-bottom:.75rem">
+          <label class="field" style="margin-bottom:.4rem"><span style="font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text-label)">Select Course</span></label>
+          <select id="coursePick"><option value="">— select course —</option></select>
+        </div>
+        <div class="option-list" id="optionList"><div style="color:var(--text-muted);font-size:.83rem;text-align:center;padding:1rem"><span class="spin" style="display:inline-block"></span></div></div>
+      </div>
+      
+      <!-- Virtual Time Section -->
+      <div id="virtualTimeSection" style="display:none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+        <div class="msec-title">Virtual Lecture Time</div>
+        <div style="display: flex; gap: 1rem;">
+          <div class="field" style="flex: 1;">
+            <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted);">Start Time (Optional)</label>
+            <input type="time" id="virtualStartTime" style="width: 100%; padding: 0.45rem 0.6rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-input); font-family: inherit;">
+          </div>
+          <div class="field" style="flex: 1;">
+            <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted);">End Time (Optional)</label>
+            <input type="time" id="virtualEndTime" style="width: 100%; padding: 0.45rem 0.6rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-input); font-family: inherit;">
+          </div>
+        </div>
+      </div>
+      
+      <div class="cancel-area" id="cancelSection" style="display:none">
+        <div class="msec-title">Or cancel this slot</div>
+        <input type="text" id="cancelReason" placeholder="Reason for cancellation (optional)"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div id="leftActs"></div>
+      <div style="display:flex;gap:.65rem;margin-left:auto">
+        <button class="btn btn-ghost btn-sm" id="modalCloseBtn">Close</button>
+        <button class="btn btn-primary btn-sm" id="saveBtn" style="display:none">
+          <svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round"><polyline points="20,6 9,17 4,12"/></svg>Confirm
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Remark Modal -->
+<div class="modal-back" id="remarkModal">
+  <div class="modal" style="max-width:450px;">
+    <div class="modal-header">
+      <div><div class="modal-title">Add Faculty Remark</div></div>
+      <button class="modal-xbtn" id="remarkModalX"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body" style="display:flex; flex-direction:column; gap:1.25rem;">
+      <div class="field">
+        <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Faculty *</label>
+        <select id="remarkFaculty"><option value="">— select faculty —</option></select>
+      </div>
+      <div style="display:flex; gap:1rem;">
+        <div class="field" style="flex:1;">
+          <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Start Time *</label>
+          <input type="time" id="remarkStartTime" style="width:100%; padding:0.5rem; border-radius:6px; border:1px solid var(--border); background:var(--bg-input); font-family:inherit;" />
+        </div>
+        <div class="field" style="flex:1;">
+          <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">End Time *</label>
+          <input type="time" id="remarkEndTime" style="width:100%; padding:0.5rem; border-radius:6px; border:1px solid var(--border); background:var(--bg-input); font-family:inherit;" />
+        </div>
+      </div>
+      <div class="field">
+        <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Remark / Activity Details *</label>
+        <textarea id="remarkText" rows="3" placeholder="e.g. Exam Duty, Meeting, Guest Lecture..." style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid var(--border); background:var(--bg-input); font-family:inherit; resize:vertical;"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" id="remarkCancelBtn">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="remarkSaveBtn">Save Remark</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-back" id="generateTypeModal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <div><div class="modal-title">Create Schedule</div></div>
+      <button class="modal-xbtn" id="generateTypeX"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.88rem;color:var(--text-muted);margin-bottom:1.25rem;">How would you like to set up the schedule for <strong id="genTypeDateStr"></strong>?</p>
+      <div style="display:flex;flex-direction:column;gap:0.75rem;">
+        <button class="btn btn-primary" id="btnGenMaster" style="justify-content:center;">
+          <svg viewBox="0 0 24 24" style="width:16px;height:16px;margin-right:8px;stroke:currentColor;fill:none;stroke-width:2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Import from Master Timetable
+        </button>
+        <button class="btn btn-ghost" id="btnGenBlank" style="justify-content:center;border:1px solid var(--border);">
+          <svg viewBox="0 0 24 24" style="width:16px;height:16px;margin-right:8px;stroke:currentColor;fill:none;stroke-width:2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+          Start with Blank Schedule
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-back" id="regenModal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <div><div class="modal-title">Delete &amp; Regenerate?</div></div>
+      <button class="modal-xbtn" id="regenX"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.88rem;color:var(--text-muted);line-height:1.65;margin-bottom:1.25rem;">This will <strong style="color:var(--error)">permanently delete</strong> today's entire schedule including all edits. Cannot be undone.</p>
+      <div style="display:flex;flex-direction:column;gap:0.75rem;">
+        <button class="btn btn-danger" id="regenMasterBtn" style="justify-content:center;">Delete &amp; Import from Master</button>
+        <button class="btn btn-ghost" id="regenBlankBtn" style="justify-content:center;border:1px solid var(--border);color:var(--error);">Delete &amp; Clear to Blank</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+<script type="module">
+import { requireRole } from '/js/auth/session.js';
+import { initSidebar } from '/js/components/sidebar.js';
+import { supabase } from '/js/config/supabase.js';
+import { preloadLogoForPDF } from '/js/utils/exportHelpers.js';
+
+const session = await requireRole('admin');
+initSidebar(session, 'scheduler');
+preloadLogoForPDF();
+const generatedBy = session?.profile?.full_name ?? 'Admin';
+
+function toast(msg, type='success') {
+  const c=document.getElementById('toast');
+  const el=document.createElement('div');
+  el.className=`toast-item ${type}`;el.textContent=msg;
+  c.appendChild(el);setTimeout(()=>el.remove(),4500);
+}
+
+function localDateStr(d) {
+  const dt = d ?? new Date();
+  return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+}
+let selectedDate=localDateStr();
+let timeSlots=[], rooms=[], scheduleMap={}, absentIds=new Set();
+let remarksData=[], allFaculty=[];
+let virtualRoomId = null;
+let activeCell=null, selectedOpt=null;
+
+flatpickr('#datePicker',{dateFormat:'Y-m-d',defaultDate:new Date(),disableMobile:true,
+  onChange([d]){
+    if(!d)return;
+    selectedDate=localDateStr(d);
+    autoLoadIfExists(selectedDate);
+  }
+});
+
+async function autoLoadIfExists(date){
+  const checkDate = date ?? selectedDate;
+  const dayType=getDayType(checkDate);
+  
+  timeSlots = [];
+  rooms = [];
+  scheduleMap = {};
+  remarksData = [];
+
+  if(dayType==='sunday'){
+    hideAllUI();
+    gridEmpty('No schedule on Sundays.');return;
+  }
+  
+  const{data:hol}=await supabase.from('holidays').select('name').eq('holiday_date',checkDate).maybeSingle();
+  if(hol){
+    hideAllUI();
+    gridEmpty(`🎉 Holiday: ${hol.name}. No schedule for this day.`);return;
+  }
+  
+  const{data}=await supabase.from('daily_schedule').select('id').eq('schedule_date',checkDate).limit(1);
+  if(data&&data.length>0){
+    document.getElementById('dangerBar').style.display='flex';
+    document.getElementById('reloadBtn').style.display='inline-flex';
+    await loadSchedule();
+  } else {
+    hideAllUI();
+    gridEmpty('No schedule for this date. Click <strong>Create Schedule</strong> to generate.');
+  }
+}
+
+function hideAllUI() {
+    document.getElementById('dangerBar').style.display='none';
+    document.getElementById('statChips').style.display='none';
+    document.getElementById('legendRow').style.display='none';
+    document.getElementById('virtualSection').style.display='none';
+    document.getElementById('remarksSection').style.display='none';
+}
+
+const DAY_MAP=['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+function getDayType(ds){return DAY_MAP[new Date(ds+'T00:00:00').getDay()];}
+function slotDayType(day){return day==='saturday'?'saturday':'weekday';}
+
+function courseName(c){
+  if(!c)return'—';
+  return c.division?`${c.year} ${c.program} ${c.division}`:`${c.year} ${c.program}`;
+}
+
+document.getElementById('generateBtn').addEventListener('click',() => {
+  document.getElementById('genTypeDateStr').textContent = new Date(selectedDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  document.getElementById('generateTypeModal').classList.add('open');
+});
+document.getElementById('generateTypeX').addEventListener('click',() => document.getElementById('generateTypeModal').classList.remove('open'));
+document.getElementById('btnGenMaster').addEventListener('click', () => {
+  document.getElementById('generateTypeModal').classList.remove('open');
+  generateOrLoad(false, 'master');
+});
+document.getElementById('btnGenBlank').addEventListener('click', () => {
+  document.getElementById('generateTypeModal').classList.remove('open');
+  generateOrLoad(false, 'blank');
+});
+document.getElementById('reloadBtn').addEventListener('click',loadSchedule);
+document.getElementById('regenerateBtn').addEventListener('click',()=>document.getElementById('regenModal').classList.add('open'));
+document.getElementById('regenX').addEventListener('click',()=>document.getElementById('regenModal').classList.remove('open'));
+document.getElementById('regenMasterBtn').addEventListener('click', async () => {
+  document.getElementById('regenModal').classList.remove('open');
+  await generateOrLoad(true, 'master');
+});
+document.getElementById('regenBlankBtn').addEventListener('click', async () => {
+  document.getElementById('regenModal').classList.remove('open');
+  await generateOrLoad(true, 'blank');
+});
+
+async function generateOrLoad(force=false, mode='master'){
+  const btn=document.getElementById('generateBtn');
+  btn.disabled=true;
+  btn.innerHTML='<span class="spin" style="display:inline-block;border-color:rgba(255,255,255,.3);border-top-color:#fff"></span> Generating…';
+  gridLoading();
+  try{
+    const{data:existing}=await supabase.from('daily_schedule').select('id').eq('schedule_date',selectedDate).limit(1);
+    const exists=existing&&existing.length>0;
+    if(exists&&!force){await loadSchedule();document.getElementById('dangerBar').style.display='flex';toast('Schedule loaded.','info');return;}
+    if(force&&exists){
+      const{error:de}=await supabase.from('daily_schedule').delete().eq('schedule_date',selectedDate);
+      if(de)throw de;
+    }
+    const dayType=getDayType(selectedDate);
+    if(dayType==='sunday'){toast('No schedule on Sundays.','warn');gridEmpty('No schedule on Sundays.');return;}
+    const{data:hol}=await supabase.from('holidays').select('name').eq('holiday_date',selectedDate).maybeSingle();
+    if(hol){toast(`${selectedDate} is a holiday: ${hol.name}. Cannot generate schedule.`,'warn');gridEmpty(`🎉 Holiday: ${hol.name}. No schedule for this day.`);document.getElementById('dangerBar').style.display='none';return;}
+    
+    if (mode === 'master') {
+      const{data:master,error:me}=await supabase.from('master_timetable')
+        .select('id,time_slot_id,room_id,course_id,subject_id,csf_id,faculty_id,virtual_start_time,virtual_end_time')
+        .eq('day_type',dayType).eq('is_active',true);
+      if(me)throw me;
+      if(!master||!master.length){toast('No master timetable found for this day type.','warn');gridEmpty('No master timetable entries. Set up the Master Timetable first.');return;}
+      
+      const{error:ie}=await supabase.from('daily_schedule').insert(
+        master.map(r=>({schedule_date:selectedDate,master_entry_id:r.id,
+          time_slot_id:r.time_slot_id,room_id:r.room_id,
+          course_id:r.course_id,subject_id:r.subject_id,csf_id:r.csf_id,
+          assigned_faculty_id:r.faculty_id,original_faculty_id:r.faculty_id,
+          virtual_start_time:r.virtual_start_time,virtual_end_time:r.virtual_end_time,
+          is_rescheduled:false,is_cancelled:false,generated_by:session.user.id}))
+      );
+      if(ie)throw ie;
+      toast('Schedule imported from master.','success');
+    } else {
+      toast('Blank schedule created.','success');
+    }
+    await loadSchedule();
+    document.getElementById('dangerBar').style.display='flex';
+  }catch(e){toast(e.message,'error');gridEmpty('Failed: '+e.message);}
+  finally{
+    btn.disabled=false;
+    btn.innerHTML='<svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="23,4 23,10 17,10"/><path d="M20.49 15a9 9 0 1 1-.08-6.07"/></svg> Create Schedule';
+    document.getElementById('reloadBtn').style.display='inline-flex';
+  }
+}
+
+async function loadSchedule(){
+  gridLoading();
+  try{
+    const dayType=getDayType(selectedDate);
+    const[sR, rR, scR, lR, remR, facR]=await Promise.all([
+      supabase.from('time_slots').select('id,slot_label,start_time,end_time,slot_type,sort_order').eq('day_type',slotDayType(dayType)).order('sort_order'),
+      supabase.from('rooms').select('id,room_code').eq('is_active',true).order('room_code'),
+      supabase.from('daily_schedule').select(`
+        id,is_cancelled,cancel_reason,is_rescheduled,original_faculty_id,
+        time_slot_id,room_id,course_id,virtual_start_time,virtual_end_time,
+        time_slot:time_slots (id,slot_label,start_time,end_time,slot_type,sort_order),
+        room:rooms (id,room_code),
+        course:courses (id,course_code,year,program,division),
+        subject:subjects (id,subject_name),
+        assigned_faculty:faculty!assigned_faculty_id(id,full_name),
+        original_faculty:faculty!original_faculty_id(id,full_name),
+        csf:course_subject_faculty!csf_id(subject:subjects(subject_name))
+      `).eq('schedule_date',selectedDate),
+      supabase.from('faculty_leaves').select('faculty_id').eq('leave_date',selectedDate).eq('status','approved'),
+      supabase.from('faculty_remarks').select('id, start_time, end_time, remark, faculty:faculty!faculty_id(id, full_name)').eq('date', selectedDate).order('start_time', { ascending: true }),
+      supabase.from('faculty').select('id, full_name').eq('is_active', true).order('full_name')
+    ]);
+    if(sR.error)throw sR.error;if(rR.error)throw rR.error;if(scR.error)throw scR.error;
+    
+    timeSlots=sR.data??[];
+    absentIds=new Set((lR.data??[]).map(l=>l.faculty_id));
+    remarksData=remR.data??[];
+    allFaculty=facR.data??[];
+    
+    rooms = (rR.data??[]).filter(r => {
+        if(r.room_code?.toUpperCase() === 'VIRTUAL') { virtualRoomId = r.id; return false; }
+        return true;
+    });
+
+    scheduleMap={};
+    for(const row of (scR.data??[])) {
+      const t = row.time_slot_id;
+      const r = row.room_id;
+      if (!t) {
+          if (!scheduleMap['null']) scheduleMap['null'] = {};
+          scheduleMap['null'][row.id] = row;
+      } else {
+          if (!scheduleMap[t]) scheduleMap[t] = {};
+          scheduleMap[t][r] = row;
+      }
+    }
+    
+    renderGrid();
+    renderVirtualGrid();
+    renderRemarks();
+    updateStats();
+
+    ['statChips','legendRow'].forEach(id=>document.getElementById(id).style.display='flex');
+    document.getElementById('virtualSection').style.display='block';
+    document.getElementById('remarksSection').style.display='block';
+    
+    document.getElementById('reloadBtn').style.display='inline-flex';
+  }catch(e){toast(e.message,'error');gridEmpty('Failed to load.');}
+}
+
+function isDoublebooked(fId,tsId,excludeId){
+  for(const[t,rm]of Object.entries(scheduleMap)){
+    if(t!==tsId)continue;
+    for(const[,row]of Object.entries(rm)){
+      if(row.id===excludeId)continue;
+      if(!row.is_cancelled&&row.assigned_faculty?.id===fId)return true;
+    }
+  }return false;
+}
+
+function getRowState(row, slotId) {
+    if(row.is_cancelled) return 'cancelled';
+    const origFId = row.original_faculty?.id;
+    const currFId = row.assigned_faculty?.id;
+    const isReplaced = row.is_rescheduled && origFId !== currFId;
+    
+    if(isReplaced) return 'resolved';
+    if(origFId && absentIds.has(origFId)) return 'absent';
+    if(currFId && slotId && isDoublebooked(currFId, slotId, row.id)) return 'warn';
+    return 'normal';
+}
+
+function buildCellHtml(row, slot, room, isVirtual=false) {
+    const state = row ? getRowState(row, slot?.id) : 'empty';
+    const base = `data-slot="${slot ? slot.id : 'null'}" data-room="${room.id}" data-time="${slot ? slot.start_time.slice(0,5)+'–'+slot.end_time.slice(0,5) : 'VIRTUAL LECTURE'}" data-rcode="${room.room_code}"`;
+    
+    if(isVirtual) {
+        if(!row) {
+            return `<div class="virtual-cell empty btn-add-virtual" ${base} data-state="empty">
+                <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <div style="font-size: 0.8rem; font-weight: 600; line-height: 1.2;">Add more<br>Lecture</div>
+            </div>`;
+        }
+        
+        const origFId = row.original_faculty?.id;
+        const currFId = row.assigned_faculty?.id;
+        const isReplaced = row.is_rescheduled && origFId !== currFId;
+        
+        const timeDisplay = (row.virtual_start_time && row.virtual_end_time) 
+            ? `<div style="font-size:0.6rem; color:var(--text-muted); margin-bottom: 3px; font-weight:600;">${row.virtual_start_time.slice(0,5)} - ${row.virtual_end_time.slice(0,5)}</div>` 
+            : '';
+
+        if (isReplaced) {
+            const origSub = row.subject?.subject_name ?? '—';
+            const origFac = row.original_faculty?.full_name ?? '—';
+            const newSub = row.csf?.subject?.subject_name ?? '—';
+            const newFac = row.assigned_faculty?.full_name ?? '—';
+            return `
+            <div class="virtual-cell filled s-resolved" data-id="${row.id}" data-course="${row.course_id??''}" data-state="resolved" ${base}>
+                ${timeDisplay}
+                <div class="lc-course">${courseName(row.course)}</div>
+                <div style="border-bottom: 1px dashed rgba(62,207,142,.4); padding-bottom: 3px; margin-bottom: 3px;">
+                    <div class="lc-subject" style="font-size:.65rem; color:var(--error); text-decoration:line-through">${origSub}</div>
+                    <div class="lc-faculty" style="font-size:.6rem; color:var(--error); text-decoration:line-through">Prof. ${origFac}</div>
+                </div>
+                <div class="lc-subject">${newSub}</div>
+                <div class="lc-faculty" style="color:var(--success); font-weight:600">Prof. ${newFac}</div>
+                <span class="lc-badge resolved" style="position: absolute; top: 0.5rem; right: 0.5rem;">✓ REPLACED</span>
+            </div>`;
+        }
+
+        const badge={absent:'<span class="lc-badge absent" style="position: absolute; top: 0.5rem; right: 0.5rem;">⚠ ABSENT</span>',warn:'<span class="lc-badge warn" style="position: absolute; top: 0.5rem; right: 0.5rem;">⚠ DOUBLE</span>',cancelled:'<span class="lc-badge cancelled" style="position: absolute; top: 0.5rem; right: 0.5rem;">CANCELLED</span>',normal:''}[state]??'';
+        return `
+        <div class="virtual-cell filled s-${state}" data-id="${row.id}" data-course="${row.course_id??''}" data-state="${state}" ${base}>
+            ${timeDisplay}
+            <div class="lc-course">${courseName(row.course)}</div>
+            <div class="lc-subject">${row.subject?.subject_name??'—'}</div>
+            <div class="lc-faculty">Prof. ${row.original_faculty?.full_name??'—'}</div>
+            ${badge}
+        </div>`;
+    }
+
+    // Physical Grid Building
+    if(!row) {
+        return`<div class="lc s-empty" ${base}><div class="lc-add"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div></div>`;
+    }
+
+    if (state === 'resolved') {
+        const origSub = row.subject?.subject_name ?? '—';
+        const origFac = row.original_faculty?.full_name ?? '—';
+        const newSub = row.csf?.subject?.subject_name ?? '—';
+        const newFac = row.assigned_faculty?.full_name ?? '—';
+        return `<div class="lc s-resolved" data-id="${row.id}" data-course="${row.course_id??''}" data-state="resolved" ${base}>
+          <div class="lc-course">${courseName(row.course)}</div>
+          <div style="border-bottom: 1px dashed rgba(62,207,142,.4); padding-bottom: 3px; margin-bottom: 3px;">
+            <div class="lc-subject" style="font-size:.65rem; color:var(--error); text-decoration:line-through">${origSub}</div>
+            <div class="lc-faculty" style="font-size:.6rem; color:var(--error); text-decoration:line-through">Prof. ${origFac}</div>
+          </div>
+          <div class="lc-subject">${newSub}</div>
+          <div class="lc-faculty" style="color:var(--success); font-weight:600">Prof. ${newFac}</div>
+          <span class="lc-badge resolved">✓ REPLACED</span>
+        </div>`;
+    }
+
+    const badge={absent:'<span class="lc-badge absent">⚠ ABSENT</span>',warn:'<span class="lc-badge warn">⚠ DOUBLE</span>',cancelled:'<span class="lc-badge cancelled">CANCELLED</span>',normal:''}[state]??'';
+    return`<div class="lc s-${state}" data-id="${row.id}" data-course="${row.course_id??''}" data-state="${state}" ${base}>
+        <div class="lc-course">${courseName(row.course)}</div>
+        <div class="lc-subject">${row.subject?.subject_name??'—'}</div>
+        <div class="lc-faculty">Prof. ${row.original_faculty?.full_name??'—'}</div>
+        ${badge}
+    </div>`;
+}
+
+function renderGrid(){
+  if(!timeSlots.length||!rooms.length){gridEmpty('No data.');return;}
+  const cols=`grid-template-columns:86px repeat(${rooms.length},minmax(108px,1fr))`;
+  let h=`<div class="tt-grid" style="margin-bottom: 0;">`;
+  h+=`<div class="tt-head" style="${cols}"><div class="th-cell">Time</div>${rooms.map(r=>`<div class="th-cell">Room ${r.room_code}</div>`).join('')}</div>`;
+  for(const slot of timeSlots){
+    const isB=slot.slot_type!=='lecture';
+    h+=`<div class="tt-row${isB?' is-break':''}" style="${cols}">`;
+    h+=`<div class="time-cell"><span class="tl">${slot.slot_label??''}</span><span class="tr">${slot.start_time.slice(0,5)}–${slot.end_time.slice(0,5)}</span></div>`;
+    if(isB){
+      const lbl=slot.slot_type==='lunch'?'🍽 Lunch':'☕ Recess';
+      h+=`<div class="break-span" style="grid-column:2/${rooms.length+2}">${lbl}</div>`;
+    }else{
+      for(const room of rooms){
+        const row=scheduleMap[slot.id]?.[room.id];
+        h+=buildCellHtml(row, slot, room, false);
+      }
+    }
+    h+=`</div>`;
+  }
+  h+=`</div>`;
+  document.getElementById('gridContainer').innerHTML=h;
+  document.querySelectorAll('.lc').forEach(cell=>{
+    cell.addEventListener('click',()=>openModal(cell));
+  });
+}
+
+function renderVirtualGrid() {
+    const container = document.getElementById('virtualGrid');
+    if (!virtualRoomId) {
+        container.innerHTML = `<div style="padding: 1rem; color: var(--text-muted); font-style: italic;">Virtual room not configured in database. Contact administrator.</div>`;
+        return;
+    }
+
+    const virtualEntries = scheduleMap['null'] ? Object.values(scheduleMap['null']) : [];
+    let html = '';
+
+    virtualEntries.forEach(row => {
+        html += buildCellHtml(row, null, {id: virtualRoomId, room_code: 'VIRTUAL'}, true);
+    });
+
+    html += buildCellHtml(null, null, {id: virtualRoomId, room_code: 'VIRTUAL'}, true); 
+
+    container.innerHTML = html;
+
+    document.querySelectorAll('.virtual-cell').forEach(cell => {
+        cell.addEventListener('click', () => openModal(cell));
+    });
+}
+
+function renderRemarks() {
+    const container = document.getElementById('remarksGrid');
+    if (!remarksData || remarksData.length === 0) {
+        container.innerHTML = `<div style="grid-column: 1 / -1; padding: 1.5rem; text-align: center; color: var(--text-muted); font-style: italic; background: var(--bg-main); border-radius: 8px;">No remarks or extra activities logged for this date.</div>`;
+        return;
+    }
+    
+    container.innerHTML = remarksData.map(r => `
+        <div class="remark-card">
+            <button class="btn-delete-remark" data-id="${r.id}" title="Delete Remark">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+            <div class="rm-fac">${r.faculty?.full_name || 'Unknown Faculty'}</div>
+            <div class="rm-time">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                ${r.start_time ? r.start_time.slice(0,5) : '--:--'} - ${r.end_time ? r.end_time.slice(0,5) : '--:--'}
+            </div>
+            <div class="rm-text">${r.remark}</div>
+        </div>
+    `).join('');
+
+    container.querySelectorAll('.btn-delete-remark').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const id = e.currentTarget.dataset.id;
+            if(confirm('Are you sure you want to delete this remark?')) {
+                try {
+                    const {error} = await supabase.from('faculty_remarks').delete().eq('id', id);
+                    if(error) throw error;
+                    toast('Remark deleted successfully', 'success');
+                    loadSchedule();
+                } catch(err) {
+                    toast(err.message, 'error');
+                }
+            }
+        });
+    });
+}
+
+function updateStats(){
+  let absent=0,warn=0,resolved=0,cancelled=0,total=0;
+  for(const[tsId,rm]of Object.entries(scheduleMap)){
+    const slot = timeSlots.find(s=>s.id===tsId);
+    if(tsId !== 'null' && slot?.slot_type!=='lecture') continue;
+    for(const[,row]of Object.entries(rm)){
+      total++;
+      if(row.is_cancelled){cancelled++;continue;}
+      if(row.is_rescheduled){resolved++;continue;}
+      const fId=row.original_faculty?.id;
+      if(fId&&absentIds.has(fId))absent++;
+      else if(tsId !== 'null' && fId&&isDoublebooked(fId,tsId,row.id))warn++;
+    }
+  }
+  document.getElementById('cntAbsent').textContent=absent;
+  document.getElementById('cntWarn').textContent=warn;
+  document.getElementById('cntResolved').textContent=resolved;
+  document.getElementById('cntCancelled').textContent=cancelled;
+  document.getElementById('cntTotal').textContent=total;
+}
+
+// ── Remark Logic ────────────────────────────────────────────────────────────
+document.getElementById('btnAddRemark').addEventListener('click', () => {
+    const facSel = document.getElementById('remarkFaculty');
+    if (facSel.options.length <= 1) {
+        facSel.innerHTML = '<option value="">— select faculty —</option>' + allFaculty.map(f => `<option value="${f.id}">${f.full_name}</option>`).join('');
+    }
+    document.getElementById('remarkStartTime').value = '';
+    document.getElementById('remarkEndTime').value = '';
+    document.getElementById('remarkText').value = '';
+    document.getElementById('remarkModal').classList.add('open');
+});
+
+document.getElementById('remarkModalX').addEventListener('click', () => document.getElementById('remarkModal').classList.remove('open'));
+document.getElementById('remarkCancelBtn').addEventListener('click', () => document.getElementById('remarkModal').classList.remove('open'));
+
+document.getElementById('remarkSaveBtn').addEventListener('click', async () => {
+    const fId = document.getElementById('remarkFaculty').value;
+    const st = document.getElementById('remarkStartTime').value;
+    const et = document.getElementById('remarkEndTime').value;
+    const txt = document.getElementById('remarkText').value.trim();
+    
+    if(!fId || !st || !et || !txt) { toast('Please fill all fields', 'warn'); return; }
+
+    const btn = document.getElementById('remarkSaveBtn');
+    btn.disabled = true;
+    try {
+        const {error} = await supabase.from('faculty_remarks').insert({
+            date: selectedDate,
+            faculty_id: fId,
+            start_time: st,
+            end_time: et,
+            remark: txt
+        });
+        if(error) throw error;
+        toast('Remark added successfully', 'success');
+        document.getElementById('remarkModal').classList.remove('open');
+        loadSchedule();
+    } catch(e) {
+        toast(e.message, 'error');
+    } finally {
+        btn.disabled = false;
+    }
+});
+
+// ── Export Logic ──────────────────────────────────────────────────────────────
+document.getElementById('exportPdfBtn').addEventListener('click', () => {
+  if (!timeSlots.length || !rooms.length || Object.keys(scheduleMap).length === 0) return toast('No schedule data to export', 'error');
+  if (!window.jspdf) { alert('PDF library not loaded.'); return; }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a0' });
+  const pageW = doc.internal.pageSize.width;
+  const pageH = doc.internal.pageSize.height;
+
+  const headRow = ['Time', ...rooms.map(r => `Room ${r.room_code}`)];
+  const head = [headRow];
+  const body = [];
+  
+  timeSlots.forEach(slot => {
+    const timeLabel = slot.slot_type === 'lecture'
+        ? `${slot.slot_label || ''}\n\n${slot.start_time.slice(0,5)} - ${slot.end_time.slice(0,5)}`
+        : `${slot.slot_label || ''}\n${slot.start_time.slice(0,5)} - ${slot.end_time.slice(0,5)}`;
+
+    if (slot.slot_type !== 'lecture') {
+      const lbl = slot.slot_type === 'lunch' ? 'Lunch Break' : 'Recess';
+      body.push([
+        { content: timeLabel, styles: { fontStyle: 'bold', valign: 'middle', halign: 'center', fillColor: [240, 240, 245] } },
+        { content: lbl, colSpan: rooms.length, styles: { halign: 'center', valign: 'middle', fontStyle: 'italic', textColor: [140, 140, 140] } }
+      ]);
+    } else {
+      const rowData = [{ content: timeLabel, styles: { fontStyle: 'bold', valign: 'middle', halign: 'center', fillColor: [240, 240, 245] } }];
+      
+      rooms.forEach(room => {
+        const row = scheduleMap[slot.id]?.[room.id];
+        if (row) {
+          if(row.is_cancelled) {
+             rowData.push({ content: `CANCELLED\n${row.cancel_reason||''}`, styles: { halign: 'center', valign: 'middle', textColor: [150, 150, 150] } });
+          } else {
+             const isReplaced = row.is_rescheduled && row.original_faculty?.id !== row.assigned_faculty?.id;
+             const c = row.course ? (row.course.division ? `${row.course.year} ${row.course.program} ${row.course.division}` : `${row.course.year} ${row.course.program}`) : '';
+             
+             if (isReplaced) {
+                const origS = row.subject?.subject_name || '';
+                const origF = row.original_faculty?.full_name || '';
+                const newS = row.csf?.subject?.subject_name || '';
+                const newF = row.assigned_faculty?.full_name || '';
+                
+                rowData.push({ content: `${c}\n\n[Original/Absent]\n${origS}\n${origF}\n\n[Replaced By]\n${newS}\n${newF}`, styles: { halign: 'center', valign: 'middle', textColor: [40, 40, 40], fontSize: 10 } });
+             } else {
+                const s = row.subject?.subject_name || '';
+                const f = row.original_faculty?.full_name || '';
+                rowData.push({ content: `${c}\n${s}\n${f}`, styles: { halign: 'center', valign: 'middle', textColor: [40, 40, 40] } });
+             }
+          }
+        } else {
+          rowData.push({ content: '-', styles: { halign: 'center', valign: 'middle', textColor: [200, 200, 200] } });
+        }
+      });
+      body.push(rowData);
+    }
+  });
+
+  doc.autoTable({
+    head, body, startY: 330, theme: 'grid',
+    styles: { fontSize: 14, cellPadding: 16, valign: 'middle', halign: 'center', overflow: 'linebreak', lineColor: [180, 180, 180], lineWidth: 1 },
+    headStyles: { fillColor: [26, 34, 68], textColor: 255, fontStyle: 'bold', fontSize: 16, halign: 'center' },
+    columnStyles: { 0: { cellWidth: 160, fontStyle: 'bold' } },
+    margin: { top: 330, left: 80, right: 80, bottom: 80 }, tableWidth: 'auto',
+    didDrawPage(data) {
+      if(window._ASAS_LOGO_DATA) try { doc.addImage(window._ASAS_LOGO_DATA, 'PNG', 80, 70, 180, 180); } catch(e){}
+      const cx = pageW / 2;
+      doc.setFont('times', 'bold'); doc.setFontSize(46); doc.setTextColor(26, 34, 68);
+      doc.text('B. K. Birla Night College, Kalyan', cx, 100, { align: 'center' });
+      doc.setFont('times', 'normal'); doc.setFontSize(26); doc.setTextColor(50, 60, 90);
+      doc.text('(Affiliated to University of Mumbai)', cx, 140, { align: 'center' });
+      doc.setFont('times', 'bolditalic'); doc.setFontSize(30);
+      doc.text('Commerce & Management', cx, 185, { align: 'center' });
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(34); doc.setTextColor(26, 34, 68);
+      doc.text('Daily Schedule', cx, 250, { align: 'center' });
+      const dtStr = new Date(selectedDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(22); doc.setTextColor(90, 100, 120);
+      doc.text(`Date: ${dtStr}`, cx, 290, { align: 'center' });
+    }
+  });
+
+  let currentY = doc.lastAutoTable.finalY + 40;
+
+  const virtualEntries = scheduleMap['null'] ? Object.values(scheduleMap['null']) : [];
+  if (virtualEntries.length > 0) {
+      if (currentY > pageH - 200) { doc.addPage(); currentY = 80; }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(22); doc.setTextColor(26, 34, 68);
+      doc.text('Virtual lecture', 80, currentY);
+
+      const vBody = virtualEntries.map(row => {
+          const vt = (row.virtual_start_time && row.virtual_end_time) ? `${row.virtual_start_time.slice(0,5)} - ${row.virtual_end_time.slice(0,5)}` : 'Flexible';
+          const c = courseName(row.course);
+          if (row.is_cancelled) return [vt, c, 'CANCELLED', row.cancel_reason||'-'];
+          const isReplaced = row.is_rescheduled && row.original_faculty?.id !== row.assigned_faculty?.id;
+          if (isReplaced) {
+              return [vt, c, `[${row.subject?.subject_name||''}] -> ${row.csf?.subject?.subject_name||''}`, `[${row.original_faculty?.full_name||''} Absent] -> ${row.assigned_faculty?.full_name||''}`];
+          }
+          let f = row.original_faculty?.full_name || '';
+          if(absentIds.has(row.original_faculty?.id)) f += ' (ABSENT)';
+          return [vt, c, row.subject?.subject_name||'-', f];
+      });
+
+      doc.autoTable({
+          head: [['Time', 'Course', 'Subject', 'Faculty']],
+          body: vBody,
+          startY: currentY + 20,
+          theme: 'grid',
+          styles: { fontSize: 16, cellPadding: 12, valign: 'middle', lineColor: [180, 180, 180], lineWidth: 1 },
+          headStyles: { fillColor: [240, 240, 245], textColor: [26, 34, 68], fontStyle: 'bold', fontSize: 18, halign: 'left' },
+          margin: { left: 80, right: 80, bottom: 80 }
+      });
+      currentY = doc.lastAutoTable.finalY + 40;
+  }
+
+  if (remarksData && remarksData.length > 0) {
+      if (currentY > pageH - 200) { doc.addPage(); currentY = 80; }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(22); doc.setTextColor(26, 34, 68);
+      doc.text('Faculty Remarks & Extra Activities', 80, currentY);
+
+      const remBody = remarksData.map(r => [
+          `${r.start_time ? r.start_time.slice(0,5) : ''} - ${r.end_time ? r.end_time.slice(0,5) : ''}`,
+          r.faculty?.full_name || 'Unknown',
+          r.remark
+      ]);
+
+      doc.autoTable({
+          head: [['Time', 'Faculty Name', 'Remark / Activity Details']],
+          body: remBody,
+          startY: currentY + 20,
+          theme: 'grid',
+          styles: { fontSize: 16, cellPadding: 12, valign: 'middle', lineColor: [180, 180, 180], lineWidth: 1 },
+          headStyles: { fillColor: [240, 240, 245], textColor: [26, 34, 68], fontStyle: 'bold', fontSize: 18, halign: 'left' },
+          columnStyles: { 0: { cellWidth: 200 }, 1: { cellWidth: 350 }, 2: { cellWidth: 'auto' } },
+          margin: { left: 80, right: 80, bottom: 80 }
+      });
+  }
+
+  doc.save(`Daily_Schedule_${selectedDate}.pdf`);
+});
+        
+document.getElementById('exportExcelBtn').addEventListener('click', () => {
+  if (!timeSlots.length || !rooms.length || Object.keys(scheduleMap).length === 0) return toast('No schedule data to export', 'error');
+  
+  const wsData = []; const merges = [];
+  const headRow = ["Time"];
+  rooms.forEach(r => headRow.push(`Room ${r.room_code}`));
+  wsData.push(headRow);
+
+  let rowIndex = 1;
+  timeSlots.forEach(slot => {
+     const timeLabel = slot.slot_type === 'lecture'
+          ? `${slot.slot_label || ''}\n\n${slot.start_time.slice(0,5)} - ${slot.end_time.slice(0,5)}`
+          : `${slot.slot_label || ''}\n${slot.start_time.slice(0,5)} - ${slot.end_time.slice(0,5)}`;
+
+     if (slot.slot_type !== 'lecture') {
+        const lbl = slot.slot_type === 'lunch' ? 'Lunch Break' : 'Recess';
+        const row = [timeLabel, lbl];
+        for (let i = 1; i < rooms.length; i++) row.push("");
+        wsData.push(row);
+        merges.push({ s: { r: rowIndex, c: 1 }, e: { r: rowIndex, c: rooms.length } });
+        rowIndex += 1;
+     } else {
+        const row1 = [timeLabel]; const row2 = [""]; const row3 = [""];
+
+        rooms.forEach(room => {
+           const row = scheduleMap[slot.id]?.[room.id];
+           if (row) {
+              if(row.is_cancelled){
+                 row1.push("CANCELLED"); row2.push(row.cancel_reason || ""); row3.push("");
+              } else {
+                 const isReplaced = row.is_rescheduled && row.original_faculty?.id !== row.assigned_faculty?.id;
+                 const c = row.course ? (row.course.division ? `${row.course.year} ${row.course.program} ${row.course.division}` : `${row.course.year} ${row.course.program}`) : '-';
+                 
+                 if (isReplaced) {
+                    const origS = row.subject?.subject_name || '-';
+                    const origF = row.original_faculty?.full_name || '-';
+                    const newS = row.csf?.subject?.subject_name || '-';
+                    const newF = row.assigned_faculty?.full_name || '-';
+                    row1.push(c); row2.push(`[${origS}] -> ${newS}`); row3.push(`[${origF} Absent] -> ${newF}`);
+                 } else {
+                    const s = row.subject?.subject_name || '-';
+                    let f = row.original_faculty?.full_name || '-';
+                    if(row.original_faculty && absentIds.has(row.original_faculty.id)) f += ' (ABSENT)';
+                    row1.push(c); row2.push(s); row3.push(f);
+                 }
+              }
+           } else { row1.push("-"); row2.push(""); row3.push(""); }
+        });
+        wsData.push(row1, row2, row3);
+        merges.push({ s: { r: rowIndex, c: 0 }, e: { r: rowIndex + 2, c: 0 } });
+        rowIndex += 3;
+     }
+  });
+
+  const virtualEntries = scheduleMap['null'] ? Object.values(scheduleMap['null']) : [];
+  if (virtualEntries.length > 0) {
+      wsData.push([]); wsData.push(["Virtual lecture", "", "", ""]); wsData.push(["Time", "Course", "Subject", "Faculty"]);
+      virtualEntries.forEach(row => {
+          const vt = (row.virtual_start_time && row.virtual_end_time) ? `${row.virtual_start_time.slice(0,5)} - ${row.virtual_end_time.slice(0,5)}` : 'Flexible';
+          const c = courseName(row.course);
+          if (row.is_cancelled) { wsData.push([vt, c, 'CANCELLED', row.cancel_reason||'-']); return; }
+          const isReplaced = row.is_rescheduled && row.original_faculty?.id !== row.assigned_faculty?.id;
+          if (isReplaced) {
+              wsData.push([vt, c, `[${row.subject?.subject_name||''}] -> ${row.csf?.subject?.subject_name||''}`, `[${row.original_faculty?.full_name||''} Absent] -> ${row.assigned_faculty?.full_name||''}`]);
+          } else {
+              let f = row.original_faculty?.full_name || '';
+              if(absentIds.has(row.original_faculty?.id)) f += ' (ABSENT)';
+              wsData.push([vt, c, row.subject?.subject_name||'-', f]);
+          }
+      });
+  }
+
+  if (remarksData && remarksData.length > 0) {
+      wsData.push([]); wsData.push(["Remarks & Extra Activities", "", ""]); wsData.push(["Time", "Faculty Name", "Remark / Activity Details"]);
+      remarksData.forEach(r => {
+          wsData.push([
+              `${r.start_time ? r.start_time.slice(0,5) : ''} - ${r.end_time ? r.end_time.slice(0,5) : ''}`,
+              r.faculty?.full_name || 'Unknown',
+              r.remark
+          ]);
+      });
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws['!merges'] = merges;
+  const cols = [{ wch: 18 }]; rooms.forEach(() => cols.push({ wch: 30 })); ws['!cols'] = cols;
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Daily Schedule");
+  XLSX.writeFile(wb, `Daily_Schedule_${selectedDate}.xlsx`);
+});
+
+// ── Cell Modal Logic ────────────────────────────────────────────────────────
+async function openModal(cell){
+  selectedOpt=null;
+  const scheduleId=cell.dataset.id;
+  const tsId=cell.dataset.slot === "null" ? null : cell.dataset.slot;
+  const roomId=cell.dataset.room;
+  const state=cell.dataset.state??'empty';
+  const time=cell.dataset.time??'';
+  const rcode=cell.dataset.rcode??'';
+  const courseId=cell.dataset.course??'';
+  const isVirtual = tsId === null;
+  const row=scheduleId ? (isVirtual ? scheduleMap['null']?.[scheduleId] : scheduleMap[tsId]?.[roomId]) : null;
+  
+  activeCell={scheduleId,tsId,roomId,courseId:row?.course_id??courseId,row};
+
+  if(isVirtual) {
+      document.getElementById('modalSub').textContent=`VIRTUAL LECTURE`;
+      document.getElementById('virtualTimeSection').style.display='block';
+      document.getElementById('virtualStartTime').value = row?.virtual_start_time || '';
+      document.getElementById('virtualEndTime').value = row?.virtual_end_time || '';
+      
+      // If it's an existing virtual row, show save button so they can just update the time!
+      if(row) document.getElementById('saveBtn').style.display='';
+  } else {
+      document.getElementById('modalSub').textContent=`${time}  ·  Room ${rcode}`;
+      document.getElementById('virtualTimeSection').style.display='none';
+  }
+
+  document.getElementById('saveBtn').style.display='none';
+  document.getElementById('leftActs').innerHTML='';
+  document.getElementById('replSection').style.display='none';
+  document.getElementById('cancelSection').style.display='none';
+  document.getElementById('coursePickWrap').style.display='none';
+  document.getElementById('cancelReason').value='';
+
+  if(!row){
+    document.getElementById('modalTitle').textContent='Add Lecture';
+    document.getElementById('infoSection').style.display='none';
+    document.getElementById('replSection').style.display='';
+    document.getElementById('replTitle').textContent='Choose Subject & Faculty';
+    document.getElementById('saveBtn').style.display='';
+    document.getElementById('coursePickWrap').style.display='';
+    await populateCoursePicker(tsId);
+    document.getElementById('optionList').innerHTML='<div style="color:var(--text-muted);font-size:.82rem;padding:.5rem">Select a course above to see options.</div>';
+  } else if(row.is_cancelled){
+    document.getElementById('modalTitle').textContent='Cancelled Slot';
+    document.getElementById('infoSection').style.display='';
+    document.getElementById('infoBox').innerHTML=buildInfo(row);
+    document.getElementById('leftActs').innerHTML=`<button class="btn btn-success btn-sm" id="uncancelBtn">↩ Restore Lecture</button>`;
+    document.getElementById('uncancelBtn').addEventListener('click',uncancelSlot);
+  } else {
+    const titles={absent:'Resolve Absent Slot',warn:'Double-Booked Slot',resolved:'Edit Rescheduled Slot',normal:'Edit Slot'};
+    document.getElementById('modalTitle').textContent=titles[state]??'Edit Slot';
+    document.getElementById('infoSection').style.display='';
+    document.getElementById('infoBox').innerHTML=buildInfo(row);
+    document.getElementById('replSection').style.display='';
+    document.getElementById('replTitle').textContent='Replace with';
+    document.getElementById('cancelSection').style.display='';
+    
+    // Always show saveBtn for editing Virtual lectures
+    document.getElementById('saveBtn').style.display='';
+    
+    document.getElementById('leftActs').innerHTML=`
+      <button class="btn btn-danger btn-sm" id="cancelSlotBtn">✕ Cancel Slot</button>
+      <button class="btn btn-ghost btn-sm" id="deleteSlotBtn" style="color:var(--error);border-color:rgba(224,92,107,.3)">🗑 Delete Lecture</button>`;
+    document.getElementById('cancelSlotBtn').addEventListener('click',cancelSlot);
+    document.getElementById('deleteSlotBtn').addEventListener('click',deleteLecture);
+    await fillOptions(row.course_id??courseId, tsId);
+  }
+
+  document.getElementById('cellModal').classList.add('open');
+}
+
+function buildInfo(row){
+  const isReplaced = row.is_rescheduled && row.original_faculty?.id !== row.assigned_faculty?.id;
+  
+  if (isReplaced) {
+     return `<span class="info-lbl">Course</span><span class="info-val">${courseName(row.course)}</span>
+      <span class="info-lbl">Original</span><span class="info-val" style="color:var(--error);text-decoration:line-through">${row.subject?.subject_name} (Prof. ${row.original_faculty?.full_name})</span>
+      <span class="info-lbl">Replaced By</span><span class="info-val" style="color:var(--success);font-weight:bold">${row.csf?.subject?.subject_name} (Prof. ${row.assigned_faculty?.full_name})</span>`;
+  }
+
+  return `<span class="info-lbl">Course</span><span class="info-val">${courseName(row.course)}</span>
+    <span class="info-lbl">Subject</span><span class="info-val">${row.subject?.subject_name??'—'}</span>
+    <span class="info-lbl">Faculty</span><span class="info-val">${row.original_faculty?.full_name??'—'}</span>
+    <span class="info-lbl">Status</span><span class="info-val">${
+      row.is_cancelled?'🚫 Cancelled':
+      absentIds.has(row.original_faculty?.id)?'⚠ Faculty Absent':'✓ Normal'
+    }</span>`;
+}
+
+async function populateCoursePicker(tsId){
+  const{data:courses}=await supabase.from('courses').select('id,year,program,division').eq('is_active',true).order('year').order('program');
+  const sel=document.getElementById('coursePick');
+  sel.innerHTML='<option value="">— select course —</option>'+(courses??[]).map(c=>`<option value="${c.id}">${courseName(c)}</option>`).join('');
+  sel.onchange=async function(){
+    if(!this.value)return;
+    activeCell.courseId=this.value;
+    await fillOptions(this.value,tsId);
+  };
+}
+
+async function fillOptions(courseId,tsId){
+  const list=document.getElementById('optionList');
+  list.innerHTML=`<div style="color:var(--text-muted);font-size:.83rem;text-align:center;padding:1rem"><span class="spin" style="display:inline-block"></span> Loading…</div>`;
+  try{
+    const{data:csf,error}=await supabase.from('course_subject_faculty')
+      .select(`id,faculty_id,subject_id,subject:subjects!subject_id(id,subject_name),faculty:faculty!faculty_id(id,full_name)`)
+      .eq('course_id',courseId).eq('is_active',true);
+    if(error)throw error;
+    if(!csf?.length){list.innerHTML=`<div style="color:var(--text-muted);text-align:center;padding:1rem;font-size:.83rem">No CSF mappings for this course.</div>`;return;}
+    
+    const isVirtual = tsId === null;
+    let bR = { data: [] };
+    if (!isVirtual) {
+        bR = await supabase.from('daily_schedule').select('assigned_faculty_id').eq('schedule_date',selectedDate).eq('time_slot_id',tsId).eq('is_cancelled',false);
+    }
+    const lR = await supabase.from('faculty_leaves').select('faculty_id').eq('leave_date',selectedDate).eq('status','approved');
+    
+    const abS=new Set((lR.data??[]).map(l=>l.faculty_id));
+    const buS=new Set((bR.data??[]).map(s=>s.assigned_faculty_id));
+    const opts=csf.map(r=>({csfId:r.id,subjectId:r.subject_id,subjectName:r.subject.subject_name,facultyId:r.faculty_id,facultyName:r.faculty.full_name,warnAbsent:abS.has(r.faculty_id),warnBusy:buS.has(r.faculty_id)}));
+    
+    list.innerHTML=opts.map((o,i)=>`
+      <div class="opt-item" data-idx="${i}">
+        <div class="opt-radio"><div class="opt-dot"></div></div>
+        <div class="opt-text"><div class="opt-subject">${o.subjectName}</div><div class="opt-faculty">Prof. ${o.facultyName}</div></div>
+        <div class="opt-warns">
+          ${o.warnAbsent?`<span class="warn-tag absent-tag">⚠ ABSENT</span>`:''}
+          ${o.warnBusy?`<span class="warn-tag">⚠ BUSY</span>`:''}
+        </div>
+      </div>`).join('');
+    list.querySelectorAll('.opt-item').forEach((el,i)=>{
+      el.addEventListener('click',()=>{
+        list.querySelectorAll('.opt-item').forEach(x=>x.classList.remove('selected'));
+        el.classList.add('selected');selectedOpt=opts[i];
+      });
+    });
+  }catch(e){list.innerHTML=`<div style="color:var(--error);padding:1rem;font-size:.83rem">${e.message}</div>`;}
+}
+
+document.getElementById('saveBtn').addEventListener('click',async()=>{
+  const isVirtual = activeCell.tsId === null;
+
+  // Validation
+  if(!activeCell.scheduleId && !selectedOpt){toast('Please select a subject & faculty.','warn');return;}
+  if(activeCell.scheduleId && !isVirtual && !selectedOpt){toast('Please select a replacement subject & faculty.','warn');return;}
+  if(!activeCell.courseId){toast('Please select a course.','warn');return;}
+  
+  const vStart = isVirtual ? (document.getElementById('virtualStartTime').value || null) : null;
+  const vEnd = isVirtual ? (document.getElementById('virtualEndTime').value || null) : null;
+
+  const btn=document.getElementById('saveBtn');btn.disabled=true;
+  try{
+    if(activeCell.scheduleId){
+      
+      const payload = {
+          is_cancelled: false,
+          cancel_reason: null
+      };
+
+      if (selectedOpt) {
+          payload.csf_id = selectedOpt.csfId;
+          payload.assigned_faculty_id = selectedOpt.facultyId;
+          payload.is_rescheduled = true;
+      }
+      
+      if (isVirtual) {
+          payload.virtual_start_time = vStart;
+          payload.virtual_end_time = vEnd;
+      }
+
+      const{error}=await supabase.from('daily_schedule').update(payload).eq('id',activeCell.scheduleId);
+      if(error)throw error;
+
+    }else{
+      const{error}=await supabase.from('daily_schedule').insert({
+        schedule_date:selectedDate,
+        time_slot_id:activeCell.tsId || null,
+        room_id:activeCell.roomId,
+        course_id:activeCell.courseId,
+        subject_id:selectedOpt.subjectId,
+        csf_id:selectedOpt.csfId,
+        assigned_faculty_id:selectedOpt.facultyId,
+        original_faculty_id:selectedOpt.facultyId,
+        virtual_start_time:vStart,
+        virtual_end_time:vEnd,
+        is_rescheduled:false,
+        is_cancelled:false,
+        generated_by:session.user.id
+      });
+      if(error)throw error;
+    }
+    toast('Saved.','success');closeModal();await loadSchedule();
+  }catch(e){toast(e.message,'error');}
+  finally{btn.disabled=false;}
+});
+
+async function deleteLecture(){
+  if(!activeCell.scheduleId)return;
+  if(!confirm('Delete this lecture completely? The cell will become empty and can be reassigned.'))return;
+  try{
+    const{error}=await supabase.from('daily_schedule').delete().eq('id',activeCell.scheduleId);
+    if(error)throw error;
+    toast('Lecture deleted.','warn');closeModal();await loadSchedule();
+  }catch(e){toast(e.message,'error');}
+}
+
+async function cancelSlot(){
+  if(!activeCell.scheduleId)return;
+  const reason=document.getElementById('cancelReason').value.trim();
+  try{
+    const{error}=await supabase.from('daily_schedule').update({is_cancelled:true,cancel_reason:reason||null}).eq('id',activeCell.scheduleId);
+    if(error)throw error;
+    toast('Slot cancelled.','warn');closeModal();await loadSchedule();
+  }catch(e){toast(e.message,'error');}
+}
+
+async function uncancelSlot(){
+  if(!activeCell.scheduleId)return;
+  try{
+    const{error}=await supabase.from('daily_schedule').update({is_cancelled:false,cancel_reason:null}).eq('id',activeCell.scheduleId);
+    if(error)throw error;
+    toast('Slot restored.','success');closeModal();await loadSchedule();
+  }catch(e){toast(e.message,'error');}
+}
+
+function closeModal(){document.getElementById('cellModal').classList.remove('open');activeCell=null;selectedOpt=null;}
+['modalX','modalCloseBtn'].forEach(id=>document.getElementById(id).addEventListener('click',closeModal));
+document.getElementById('cellModal').addEventListener('click',e=>{if(e.target===document.getElementById('cellModal'))closeModal();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+function gridLoading(){document.getElementById('gridContainer').innerHTML=`<div class="tt-grid"><div class="grid-placeholder"><span class="spin" style="display:inline-block;width:24px;height:24px;border-width:3px"></span><div>Loading…</div></div></div>`;}
+function gridEmpty(msg){document.getElementById('gridContainer').innerHTML=`<div class="tt-grid"><div class="grid-placeholder"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><div>${msg}</div></div></div>`;}
+
+autoLoadIfExists(selectedDate);
+</script>
+</body>
+</html>

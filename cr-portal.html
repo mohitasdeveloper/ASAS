@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+  <title>ASAS — Class Representative</title>
+
+  <!-- Google Fonts: Roboto & Google Sans / Plus Jakarta Sans Fallback -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="/css/theme.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+  <style>
+    /* ═══════════════════════════════════════════════════════════════
+       MATERIAL DESIGN 3 (M3) DESIGN TOKENS & SURFACES
+       ═══════════════════════════════════════════════════════════════ */
+    :root, [data-theme="light"] {
+      --md-sys-color-primary: #005ac1;
+      --md-sys-color-on-primary: #ffffff;
+      --md-sys-color-primary-container: #d8e2ff;
+      --md-sys-color-on-primary-container: #001a41;
+      
+      --md-sys-color-surface: #f8f9ff;
+      --md-sys-color-surface-dim: #d9d9e0;
+      --md-sys-color-surface-bright: #f8f9ff;
+      --md-sys-color-surface-container-lowest: #ffffff;
+      --md-sys-color-surface-container-low: #f2f3fa;
+      --md-sys-color-surface-container: #eceef4;
+      --md-sys-color-surface-container-high: #e6e8ee;
+      --md-sys-color-surface-container-highest: #e0e2e8;
+      
+      --md-sys-color-on-surface: #191c20;
+      --md-sys-color-on-surface-variant: #44474f;
+      --md-sys-color-outline: #74777f;
+      --md-sys-color-outline-variant: #c4c6d0;
+
+      --md-sys-color-success: #146c2e;
+      --md-sys-color-success-container: #c4eed0;
+      --md-sys-color-on-success-container: #072710;
+
+      --md-sys-color-warning: #7c5800;
+      --md-sys-color-warning-container: #ffdf9e;
+      --md-sys-color-on-warning-container: #261900;
+
+      --md-sys-color-error: #ba1a1a;
+      --md-sys-color-error-container: #ffdad6;
+      --md-sys-color-on-error-container: #410002;
+
+      --md-sys-elevation-1: 0px 1px 3px 1px rgba(0, 0, 0, 0.08), 0px 1px 2px 0px rgba(0, 0, 0, 0.05);
+      --md-sys-elevation-2: 0px 2px 6px 2px rgba(0, 0, 0, 0.08), 0px 1px 2px 0px rgba(0, 0, 0, 0.04);
+      --md-sys-elevation-3: 0px 4px 8px 3px rgba(0, 0, 0, 0.10), 0px 1px 3px 0px rgba(0, 0, 0, 0.06);
+
+      --md-shape-corner-xs: 4px;
+      --md-shape-corner-s: 8px;
+      --md-shape-corner-m: 12px;
+      --md-shape-corner-l: 16px;
+      --md-shape-corner-xl: 28px;
+      --md-shape-corner-full: 9999px;
+
+      --md-font-family: 'Plus Jakarta Sans', 'Roboto', system-ui, -apple-system, sans-serif;
+      --easing-standard: cubic-bezier(0.2, 0.0, 0, 1.0);
+      --easing-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1.0);
+    }
+
+    [data-theme="dark"] {
+      --md-sys-color-primary: #adc6ff;
+      --md-sys-color-on-primary: #002e69;
+      --md-sys-color-primary-container: #004494;
+      --md-sys-color-on-primary-container: #d8e2ff;
+      
+      --md-sys-color-surface: #111318;
+      --md-sys-color-surface-dim: #111318;
+      --md-sys-color-surface-bright: #37393e;
+      --md-sys-color-surface-container-lowest: #0c0e13;
+      --md-sys-color-surface-container-low: #191c20;
+      --md-sys-color-surface-container: #1d2024;
+      --md-sys-color-surface-container-high: #282a2f;
+      --md-sys-color-surface-container-highest: #33353a;
+
+      --md-sys-color-on-surface: #e2e2e9;
+      --md-sys-color-on-surface-variant: #c4c6d0;
+      --md-sys-color-outline: #8e9099;
+      --md-sys-color-outline-variant: #44474f;
+
+      --md-sys-color-success: #6cdb88;
+      --md-sys-color-success-container: #00531f;
+      --md-sys-color-on-success-container: #c4eed0;
+
+      --md-sys-color-warning: #fabd00;
+      --md-sys-color-warning-container: #5c4100;
+      --md-sys-color-on-warning-container: #ffdf9e;
+
+      --md-sys-color-error: #ffb4ab;
+      --md-sys-color-error-container: #93000a;
+      --md-sys-color-on-error-container: #ffdad6;
+
+      --md-sys-elevation-1: 0px 1px 3px 1px rgba(0, 0, 0, 0.28);
+      --md-sys-elevation-2: 0px 2px 6px 2px rgba(0, 0, 0, 0.35);
+      --md-sys-elevation-3: 0px 4px 12px 3px rgba(0, 0, 0, 0.45);
+    }
+
+    /* ══════════════════ CORE RESET & LAYOUT ══════════════════ */
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0; padding: 0; height: 100%;
+      font-family: var(--md-font-family);
+      background: var(--md-sys-color-surface);
+      color: var(--md-sys-color-on-surface);
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .app-shell {
+      display: flex; flex-direction: column;
+      height: 100dvh; width: 100%;
+      background: var(--md-sys-color-surface);
+      position: relative;
+    }
+
+    /* ══════════════════ GOOGLE APP BAR ══════════════════ */
+    .top-app-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: calc(0.6rem + env(safe-area-inset-top)) 1.25rem 0.6rem;
+      background: var(--md-sys-color-surface);
+      transition: background-color 0.2s, box-shadow 0.2s;
+      z-index: 40; flex-shrink: 0;
+    }
+    .top-app-bar.scrolled {
+      background: var(--md-sys-color-surface-container);
+      box-shadow: var(--md-sys-elevation-1);
+    }
+    .top-app-bar-brand {
+      display: flex; align-items: center; gap: 0.75rem;
+    }
+    .logo-badge {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: var(--md-sys-color-primary-container);
+      color: var(--md-sys-color-on-primary-container);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 1rem;
+    }
+    .bar-titles { display: flex; flex-direction: column; }
+    .bar-title {
+      font-size: 1.18rem; font-weight: 700;
+      color: var(--md-sys-color-on-surface);
+      line-height: 1.2;
+    }
+    .bar-subtitle {
+      font-size: 0.72rem; font-weight: 500;
+      color: var(--md-sys-color-on-surface-variant);
+      letter-spacing: 0.02em;
+    }
+
+    .app-bar-actions { display: flex; align-items: center; gap: 0.5rem; }
+
+    /* M3 Standard Action Buttons */
+    .m3-icon-button {
+      width: 44px; height: 44px; border-radius: 50%;
+      border: none; background: transparent;
+      color: var(--md-sys-color-on-surface-variant);
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer; position: relative; overflow: hidden;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .m3-icon-button:hover { background: var(--md-sys-color-surface-container-high); }
+    .m3-icon-button:active { transform: scale(0.92); background: var(--md-sys-color-surface-container-highest); }
+    .m3-icon-button svg { width: 22px; height: 22px; }
+    .m3-icon-button.spinning svg { animation: m3Spin 0.75s linear infinite; }
+    @keyframes m3Spin { to { transform: rotate(360deg); } }
+
+    .google-account-btn {
+      width: 38px; height: 38px; border-radius: 50%;
+      border: 2px solid var(--md-sys-color-surface-container-highest);
+      background: var(--md-sys-color-primary);
+      color: var(--md-sys-color-on-primary);
+      font-weight: 700; font-size: 0.9rem;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      box-shadow: var(--md-sys-elevation-1);
+      transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .google-account-btn:active { transform: scale(0.9); }
+
+    /* ══════════════════ MAIN CONTENT AREA ══════════════════ */
+    .app-content {
+      flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding: 0.75rem 1rem calc(2rem + 80px + env(safe-area-inset-bottom));
+      max-width: 860px; width: 100%; margin: 0 auto;
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; animation: m3TabFade 0.24s var(--easing-standard); }
+    @keyframes m3TabFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ══════════════════ M3 HERO & METRICS ══════════════════ */
+    .hero-banner {
+      background: linear-gradient(135deg, var(--md-sys-color-surface-container-low), var(--md-sys-color-surface-container));
+      border-radius: var(--md-shape-corner-xl);
+      padding: 1.25rem 1.25rem 1rem;
+      margin-bottom: 1.2rem;
+      border: 1px solid var(--md-sys-color-surface-container-highest);
+      box-shadow: var(--md-sys-elevation-1);
+    }
+    .hero-greeting {
+      font-size: 0.85rem; font-weight: 600;
+      color: var(--md-sys-color-primary);
+      text-transform: uppercase; letter-spacing: 0.06em;
+      margin-bottom: 0.25rem;
+    }
+    .hero-headline {
+      font-size: 1.35rem; font-weight: 800;
+      color: var(--md-sys-color-on-surface);
+      margin-bottom: 1rem;
+    }
+
+    .m3-stats-row {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem;
+    }
+    .m3-stat-card {
+      background: var(--md-sys-color-surface-container-lowest);
+      border-radius: var(--md-shape-corner-l);
+      padding: 0.8rem 0.5rem; text-align: center;
+      box-shadow: var(--md-sys-elevation-1);
+      border: 1px solid var(--md-sys-color-outline-variant);
+      transition: transform 0.15s;
+    }
+    .m3-stat-val {
+      font-size: 1.6rem; font-weight: 800;
+      color: var(--md-sys-color-on-surface); line-height: 1;
+    }
+    .m3-stat-lbl {
+      font-size: 0.68rem; font-weight: 600;
+      color: var(--md-sys-color-on-surface-variant);
+      margin-top: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+
+    .m3-section-title {
+      font-size: 0.82rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--md-sys-color-on-surface-variant);
+      margin: 1.2rem 0 0.75rem 0.25rem;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    /* ══════════════════ M3 EXPRESSIVE CARDS ══════════════════ */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+      gap: 0.85rem;
+    }
+    .m3-card {
+      background: var(--md-sys-color-surface-container-low);
+      border-radius: var(--md-shape-corner-xl);
+      padding: 1.1rem 1.2rem;
+      cursor: pointer; position: relative; overflow: hidden;
+      border: 1px solid var(--md-sys-color-outline-variant);
+      box-shadow: var(--md-sys-elevation-1);
+      transition: transform 0.18s var(--easing-standard), box-shadow 0.18s, background-color 0.18s;
+    }
+    .m3-card:hover {
+      background: var(--md-sys-color-surface-container);
+      box-shadow: var(--md-sys-elevation-2);
+    }
+    .m3-card:active {
+      transform: scale(0.975);
+      background: var(--md-sys-color-surface-container-high);
+    }
+    .m3-card::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 6px;
+      background: var(--md-sys-color-outline-variant);
+      border-radius: 4px 0 0 4px;
+    }
+    .m3-card.card-verified::before { background: var(--md-sys-color-success); }
+    .m3-card.card-pending::before  { background: var(--md-sys-color-error); }
+
+    .card-header-row {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 0.4rem;
+    }
+    .card-time-pill {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      padding: 0.2rem 0.6rem; border-radius: var(--md-shape-corner-full);
+      background: var(--md-sys-color-primary-container);
+      color: var(--md-sys-color-on-primary-container);
+      font-size: 0.72rem; font-weight: 700;
+    }
+    .card-subject {
+      font-size: 1.05rem; font-weight: 700;
+      color: var(--md-sys-color-on-surface);
+      margin-bottom: 0.25rem; line-height: 1.25;
+    }
+    .card-meta-text {
+      font-size: 0.78rem; font-weight: 500;
+      color: var(--md-sys-color-on-surface-variant);
+      margin-bottom: 0.8rem;
+    }
+    .card-badges-row {
+      display: flex; gap: 0.45rem; align-items: center; flex-wrap: wrap;
+    }
+
+    /* M3 Tonal Assist Chips */
+    .m3-chip {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      padding: 0.28rem 0.7rem; border-radius: var(--md-shape-corner-s);
+      font-size: 0.72rem; font-weight: 600;
+      background: var(--md-sys-color-surface-container-highest);
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .m3-chip.chip-success {
+      background: var(--md-sys-color-success-container);
+      color: var(--md-sys-color-on-success-container);
+    }
+    .m3-chip.chip-warning {
+      background: var(--md-sys-color-warning-container);
+      color: var(--md-sys-color-on-warning-container);
+    }
+    .m3-chip.chip-error {
+      background: var(--md-sys-color-error-container);
+      color: var(--md-sys-color-on-error-container);
+    }
+
+    /* Student Item Card */
+    .student-card {
+      background: var(--md-sys-color-surface-container-low);
+      border-radius: var(--md-shape-corner-l);
+      padding: 0.9rem 1.1rem;
+      display: flex; align-items: center; justify-content: space-between;
+      border: 1px solid var(--md-sys-color-outline-variant);
+      cursor: pointer; transition: transform 0.12s, background 0.15s;
+    }
+    .student-card:active { transform: scale(0.98); background: var(--md-sys-color-surface-container-high); }
+    .sc-info { min-width: 0; }
+    .sc-roll { font-size: 0.72rem; font-weight: 700; color: var(--md-sys-color-primary); }
+    .sc-name {
+      font-size: 0.95rem; font-weight: 700;
+      color: var(--md-sys-color-on-surface);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .sc-meta { font-size: 0.73rem; color: var(--md-sys-color-on-surface-variant); margin-top: 0.1rem; }
+
+    .m3-percent-badge {
+      width: 48px; height: 48px; border-radius: 50%;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 0.82rem; flex-shrink: 0;
+    }
+    .pct-high { background: var(--md-sys-color-success-container); color: var(--md-sys-color-on-success-container); }
+    .pct-med  { background: var(--md-sys-color-warning-container); color: var(--md-sys-color-on-warning-container); }
+    .pct-low  { background: var(--md-sys-color-error-container);   color: var(--md-sys-color-on-error-container); }
+
+    /* ══════════════════ SEARCH & FILTER BAR ══════════════════ */
+    .m3-search-bar {
+      background: var(--md-sys-color-surface-container-high);
+      border-radius: var(--md-shape-corner-full);
+      padding: 0.4rem 1rem;
+      display: flex; align-items: center; gap: 0.65rem;
+      margin-bottom: 0.85rem;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+    }
+    .m3-search-bar:focus-within {
+      background: var(--md-sys-color-surface-container-lowest);
+      border-color: var(--md-sys-color-primary);
+      box-shadow: 0 0 0 2px var(--md-sys-color-primary-container);
+    }
+    .m3-search-bar svg { width: 20px; height: 20px; color: var(--md-sys-color-on-surface-variant); flex-shrink: 0; }
+    .m3-search-bar input {
+      border: none; background: transparent; outline: none; width: 100%;
+      font-family: inherit; font-size: 0.92rem; color: var(--md-sys-color-on-surface);
+    }
+
+    .filter-chips-row {
+      display: flex; gap: 0.5rem; overflow-x: auto;
+      padding-bottom: 0.4rem; -webkit-overflow-scrolling: touch;
+      margin-bottom: 0.75rem;
+    }
+    .m3-filter-chip {
+      padding: 0.45rem 0.95rem; border-radius: var(--md-shape-corner-s);
+      border: 1px solid var(--md-sys-color-outline-variant);
+      background: var(--md-sys-color-surface-container-low);
+      color: var(--md-sys-color-on-surface-variant);
+      font-size: 0.8rem; font-weight: 600; cursor: pointer;
+      white-space: nowrap; transition: all 0.15s;
+    }
+    .m3-filter-chip.active {
+      background: var(--md-sys-color-primary-container);
+      color: var(--md-sys-color-on-primary-container);
+      border-color: var(--md-sys-color-primary);
+    }
+
+    /* ══════════════════ M3 BOTTOM NAVIGATION (80PX STANDARD) ══════════════════ */
+    .m3-bottom-nav {
+      position: fixed; left: 0; right: 0; bottom: 0;
+      height: calc(76px + env(safe-area-inset-bottom));
+      padding-bottom: env(safe-area-inset-bottom);
+      background: var(--md-sys-color-surface-container);
+      display: flex; align-items: center; justify-content: space-around;
+      box-shadow: var(--md-sys-elevation-2);
+      z-index: 50; border-top: 1px solid var(--md-sys-color-surface-container-highest);
+    }
+    .m3-nav-item {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      border: none; background: none; cursor: pointer;
+      flex: 1; padding: 0.4rem 0; gap: 0.25rem;
+      color: var(--md-sys-color-on-surface-variant);
+      font-family: inherit; font-size: 0.72rem; font-weight: 700;
+      position: relative;
+    }
+    .m3-nav-pill {
+      width: 58px; height: 32px; border-radius: var(--md-shape-corner-full);
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s cubic-bezier(0.2, 0, 0, 1), width 0.2s;
+    }
+    .m3-nav-item svg { width: 22px; height: 22px; transition: transform 0.15s; }
+    .m3-nav-item.active { color: var(--md-sys-color-on-surface); font-weight: 800; }
+    .m3-nav-item.active .m3-nav-pill {
+      background: var(--md-sys-color-primary-container);
+      color: var(--md-sys-color-on-primary-container);
+    }
+    .m3-nav-item:active svg { transform: scale(0.85); }
+
+    /* ══════════════════ M3 BOTTOM SHEETS & MODALS ══════════════════ */
+    .m3-scrim {
+      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+      z-index: 100; display: none; align-items: flex-end; justify-content: center;
+    }
+    .m3-scrim.open { display: flex; animation: m3ScrimFade 0.22s var(--easing-standard); }
+    @keyframes m3ScrimFade { from { opacity: 0; } to { opacity: 1; } }
+
+    .m3-bottom-sheet {
+      background: var(--md-sys-color-surface-container-low);
+      width: 100%; max-width: 680px; max-height: 90dvh;
+      border-radius: 28px 28px 0 0;
+      display: flex; flex-direction: column; overflow: hidden;
+      box-shadow: var(--md-sys-elevation-3);
+      animation: m3SheetSlide 0.28s var(--easing-decelerate);
+    }
+    @media (min-width: 720px) {
+      .m3-scrim { align-items: center; padding: 1.5rem; }
+      .m3-bottom-sheet { border-radius: 28px; max-height: 84dvh; }
+    }
+    @keyframes m3SheetSlide { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+    .m3-drag-handle-container {
+      padding: 0.75rem 0 0.35rem; display: flex; justify-content: center;
+      cursor: grab; flex-shrink: 0;
+    }
+    .m3-drag-handle {
+      width: 36px; height: 4px; border-radius: 4px;
+      background: var(--md-sys-color-outline);
+      opacity: 0.6;
+    }
+
+    .m3-sheet-header {
+      padding: 0.5rem 1.4rem 1rem;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--md-sys-color-surface-container-highest);
+      flex-shrink: 0;
+    }
+    .m3-sheet-title { font-size: 1.25rem; font-weight: 800; color: var(--md-sys-color-on-surface); }
+    .m3-sheet-subtitle { font-size: 0.78rem; font-weight: 500; color: var(--md-sys-color-on-surface-variant); }
+
+    .m3-sheet-body {
+      flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding: 1.2rem 1.4rem;
+    }
+    .m3-sheet-footer {
+      padding: 1rem 1.4rem calc(1rem + env(safe-area-inset-bottom));
+      background: var(--md-sys-color-surface-container);
+      border-top: 1px solid var(--md-sys-color-surface-container-highest);
+      display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    /* M3 Attendance Quick Action Bar */
+    .quick-actions-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 0.5rem; margin-bottom: 1rem;
+      padding: 0.4rem; border-radius: var(--md-shape-corner-l);
+      background: var(--md-sys-color-surface-container);
+    }
+    .m3-tonal-btn {
+      flex: 1; min-height: 38px; border-radius: var(--md-shape-corner-m);
+      border: none; background: transparent;
+      font-size: 0.78rem; font-weight: 700;
+      color: var(--md-sys-color-primary); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 0.3rem;
+      transition: background 0.15s;
+    }
+    .m3-tonal-btn:active { background: var(--md-sys-color-surface-container-highest); }
+
+    /* Student Roster Row with Tri-State Selector */
+    .m3-roster-item {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 0.75rem; padding: 0.65rem 0.85rem;
+      border-radius: var(--md-shape-corner-m);
+      background: var(--md-sys-color-surface-container-lowest);
+      border: 1px solid var(--md-sys-color-surface-container-high);
+      margin-bottom: 0.5rem;
+    }
+    .m3-roster-name {
+      font-size: 0.88rem; font-weight: 700;
+      color: var(--md-sys-color-on-surface);
+      line-height: 1.2;
+    }
+    .m3-roster-id {
+      font-size: 0.72rem; font-weight: 600;
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
+    /* Attendance Toggle Switcher */
+    .att-state-btn {
+      min-width: 96px; height: 38px; border-radius: var(--md-shape-corner-full);
+      border: 1px solid var(--md-sys-color-outline-variant);
+      background: var(--md-sys-color-surface-container-low);
+      font-size: 0.76rem; font-weight: 800; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+      transition: all 0.15s;
+    }
+    .att-state-btn:active { transform: scale(0.93); }
+    .att-state-btn.is-present {
+      background: var(--md-sys-color-success-container);
+      color: var(--md-sys-color-on-success-container);
+      border-color: var(--md-sys-color-success);
+    }
+    .att-state-btn.is-absent {
+      background: var(--md-sys-color-error-container);
+      color: var(--md-sys-color-on-error-container);
+      border-color: var(--md-sys-color-error);
+    }
+    .att-state-btn.is-unmarked {
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
+    /* Google Filled & Outlined Buttons */
+    .m3-btn-filled {
+      height: 44px; padding: 0 1.4rem;
+      border-radius: var(--md-shape-corner-full);
+      background: var(--md-sys-color-primary);
+      color: var(--md-sys-color-on-primary);
+      font-weight: 700; font-size: 0.86rem; border: none;
+      cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+      box-shadow: var(--md-sys-elevation-1);
+      transition: background 0.15s, transform 0.1s;
+    }
+    .m3-btn-filled:active { transform: scale(0.96); }
+    .m3-btn-outlined {
+      height: 44px; padding: 0 1.2rem;
+      border-radius: var(--md-shape-corner-full);
+      background: transparent;
+      border: 1px solid var(--md-sys-color-outline);
+      color: var(--md-sys-color-primary);
+      font-weight: 700; font-size: 0.86rem; cursor: pointer;
+    }
+
+    /* Skeleton shimmer */
+    .m3-skeleton-card {
+      height: 96px; border-radius: var(--md-shape-corner-xl);
+      background: linear-gradient(90deg, var(--md-sys-color-surface-container-low) 25%, var(--md-sys-color-surface-container-high) 50%, var(--md-sys-color-surface-container-low) 75%);
+      background-size: 200% 100%; animation: m3Shimmer 1.25s infinite;
+      margin-bottom: 0.75rem;
+    }
+    @keyframes m3Shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* M3 Floating Toast */
+    #toast {
+      position: fixed; bottom: calc(88px + env(safe-area-inset-bottom));
+      left: 50%; transform: translateX(-50%); z-index: 250;
+      display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none;
+    }
+    .m3-snackbar {
+      background: var(--md-sys-color-on-surface);
+      color: var(--md-sys-color-surface);
+      padding: 0.75rem 1.25rem; border-radius: var(--md-shape-corner-s);
+      font-size: 0.84rem; font-weight: 600;
+      box-shadow: var(--md-sys-elevation-3);
+      animation: m3SnackIn 0.2s var(--easing-decelerate);
+    }
+    @keyframes m3SnackIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+
+<div class="app-shell">
+  <!-- Google Style App Bar -->
+  <header class="top-app-bar" id="topAppBar">
+    <div class="top-app-bar-brand">
+      <div class="logo-badge">CR</div>
+      <div class="bar-titles">
+        <div class="bar-title" id="topBarTitle">Overview</div>
+        <div class="bar-subtitle" id="topBarSub">Course Portal</div>
+      </div>
+    </div>
+    <div class="app-bar-actions">
+      <button class="m3-icon-button" id="refreshBtn" title="Sync">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
+          <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+          <path d="M16 21h5v-5"/>
+        </svg>
+      </button>
+      <button class="google-account-btn" id="userAvatar" title="Google Account Profile">?</button>
+    </div>
+  </header>
+
+  <!-- Content Stream -->
+  <main class="app-content" id="appScrollArea">
+    
+    <!-- TAB 1: HOME -->
+    <section class="tab-panel active" id="panelHome">
+      <div class="hero-banner">
+        <div class="hero-greeting" id="homeGreeting">Today's Schedule</div>
+        <div class="hero-headline" id="homeDateLabel">—</div>
+        <div class="m3-stats-row" id="homeStats"></div>
+      </div>
+
+      <div class="m3-section-title">
+        <span>Scheduled Lectures</span>
+      </div>
+      <div id="homeLectureArea">
+        <div class="m3-skeleton-card"></div>
+        <div class="m3-skeleton-card"></div>
+      </div>
+    </section>
+
+    <!-- TAB 2: RECORD ATTENDANCE -->
+    <section class="tab-panel" id="panelRecord">
+      <div class="m3-search-bar" style="margin-bottom:1rem;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <input type="text" id="attDatePicker" placeholder="Select calendar date..." readonly />
+      </div>
+      <div id="lectureArea">
+        <div class="m3-skeleton-card"></div>
+      </div>
+    </section>
+
+    <!-- TAB 3: STUDENTS DIRECTORY -->
+    <section class="tab-panel" id="panelStudents">
+      <div class="m3-search-bar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="studentSearch" placeholder="Search student name or roll ID..." />
+      </div>
+
+      <div class="filter-chips-row">
+        <button class="m3-filter-chip active" data-filter="all">All Students</button>
+        <button class="m3-filter-chip" data-filter="75">Defaulters (&lt; 75%)</button>
+        <button class="m3-filter-chip" data-filter="50">Critical (&lt; 50%)</button>
+      </div>
+
+      <div class="quick-actions-bar" style="margin-bottom:0.75rem;">
+        <select id="sortSelect" style="border:none; background:transparent; font-family:inherit; font-size:0.8rem; font-weight:700; color:var(--md-sys-color-primary); outline:none; padding:0.2rem 0.5rem; width:100%;">
+          <option value="name_asc">Name: A to Z</option>
+          <option value="name_desc">Name: Z to A</option>
+          <option value="id_asc">Student ID: Ascending</option>
+          <option value="id_desc">Student ID: Descending</option>
+          <option value="pct_asc">Attendance %: Low to High</option>
+          <option value="pct_desc">Attendance %: High to Low</option>
+        </select>
+      </div>
+
+      <div id="studentsMeta" style="font-size:0.74rem; font-weight:600; color:var(--md-sys-color-on-surface-variant); margin-bottom:0.75rem; padding-left:0.2rem;"></div>
+      <div id="viewArea" class="card-grid"></div>
+    </section>
+  </main>
+
+  <!-- M3 Bottom Navigation Bar -->
+  <nav class="m3-bottom-nav">
+    <button class="m3-nav-item active" data-tab="home">
+      <div class="m3-nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1V9.5z"/></svg>
+      </div>
+      <span>Today</span>
+    </button>
+    <button class="m3-nav-item" data-tab="record">
+      <div class="m3-nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      </div>
+      <span>Record</span>
+    </button>
+    <button class="m3-nav-item" data-tab="students">
+      <div class="m3-nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <span>Roster</span>
+    </button>
+  </nav>
+</div>
+
+<!-- M3 User Profile Sheet (Google Account Dialog Paradigm) -->
+<div class="m3-scrim" id="profileSheetBack">
+  <div class="m3-bottom-sheet" style="max-width:440px;">
+    <div class="m3-drag-handle-container"><div class="m3-drag-handle"></div></div>
+    <div style="padding:1rem 1.5rem 1.8rem; text-align:center;">
+      <div class="google-account-btn" id="profileAvatarBig" style="width:68px; height:68px; font-size:1.6rem; margin:0 auto 0.75rem;">?</div>
+      <div style="font-size:1.15rem; font-weight:800; color:var(--md-sys-color-on-surface);" id="userName">—</div>
+      <div style="font-size:0.8rem; color:var(--md-sys-color-on-surface-variant); margin-top:0.15rem;" id="userRole">Class Representative</div>
+      
+      <div style="margin:1.5rem 0; padding:0.75rem 1rem; border-radius:16px; background:var(--md-sys-color-surface-container); display:flex; align-items:center; justify-content:space-between;">
+        <span style="font-size:0.88rem; font-weight:700;">Theme</span>
+        <label class="toggle-switch"><input type="checkbox" id="themeToggle"/><span class="toggle-track"></span></label>
+      </div>
+
+      <button class="m3-btn-outlined" id="logoutBtn" style="width:100%; border-color:var(--md-sys-color-error); color:var(--md-sys-color-error);">Sign Out</button>
+    </div>
+  </div>
+</div>
+
+<!-- Attendance Marking Bottom Sheet -->
+<div class="m3-scrim" id="attModalBack">
+  <div class="m3-bottom-sheet">
+    <div class="m3-drag-handle-container"><div class="m3-drag-handle"></div></div>
+    <div class="m3-sheet-header">
+      <div>
+        <div class="m3-sheet-title" id="mTitle">—</div>
+        <div class="m3-sheet-subtitle" id="mSub">—</div>
+      </div>
+      <button class="m3-icon-button" id="mCloseBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+
+    <div class="m3-sheet-body" id="mBody">
+      <!-- Dynamic roster & controls injected here -->
+    </div>
+
+    <div class="m3-sheet-footer">
+      <div id="mLockInfo"></div>
+      <div style="display:flex; gap:0.6rem;">
+        <button class="m3-btn-outlined" id="mCloseBtn2">Cancel</button>
+        <button class="m3-btn-filled" id="mSaveBtn">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Student Attendance History Sheet -->
+<div class="m3-scrim" id="histModalBack">
+  <div class="m3-bottom-sheet">
+    <div class="m3-drag-handle-container"><div class="m3-drag-handle"></div></div>
+    <div class="m3-sheet-header">
+      <div>
+        <div class="m3-sheet-title" id="hTitle">—</div>
+        <div class="m3-sheet-subtitle" id="hSub">—</div>
+      </div>
+      <button class="m3-icon-button" id="hCloseBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="m3-sheet-body" id="hBody"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     APPLICATION LOGIC (PRESERVES SUPABASE & CLOUDINARY FLOWS)
+     ═══════════════════════════════════════════════════════════════ -->
+<script type="module">
+  import { requireRole } from '/js/auth/session.js';
+  import { initSidebar } from '/js/components/sidebar.js';
+  import { supabase } from '/js/config/supabase.js';
+  import { getClassAttendanceOverview, getStudentAttendanceHistory, studentName, fmtDate, fmtTime } from '/js/modules/reports.js';
+
+  const session = await requireRole('cr');
+  initSidebar(session, 'cr-portal');
+
+  document.getElementById('profileAvatarBig').textContent = document.getElementById('userAvatar').textContent;
+
+  const CLOUD_NAME = 'duy7opouq';
+  const UPLOAD_PRESET = 'ASAS_PROOFS';
+  const courseId = session.profile.course_id;
+
+  function toast(msg) {
+    const c = document.getElementById('toast');
+    const el = document.createElement('div');
+    el.className = 'm3-snackbar';
+    el.textContent = msg;
+    c.appendChild(el);
+    setTimeout(() => el.remove(), 3200);
+  }
+
+  function localDateStr(d) {
+    const dt = d ?? new Date();
+    return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+  }
+
+  function fullName(s) {
+    return [s.first_name, s.middle_name, s.last_name].filter(Boolean).join(' ');
+  }
+
+  function friendlyDate(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+  }
+
+  const TODAY = localDateStr();
+  let dataCache = {};
+
+  // Scroll effect on top app bar
+  document.getElementById('appScrollArea').addEventListener('scroll', (e) => {
+    document.getElementById('topAppBar').classList.toggle('scrolled', e.target.scrollTop > 8);
+  });
+
+  // Profile Dialog Toggle
+  document.getElementById('userAvatar').addEventListener('click', () => {
+    document.getElementById('profileSheetBack').classList.add('open');
+  });
+  document.getElementById('profileSheetBack').addEventListener('click', (e) => {
+    if (e.target.id === 'profileSheetBack') e.currentTarget.classList.remove('open');
+  });
+
+  // Tab Navigation
+  const TAB_NAMES = { home: 'Overview', record: 'Record Attendance', students: 'Student Roster' };
+  let activeTab = 'home';
+
+  document.querySelectorAll('.m3-nav-item').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+
+  function switchTab(tab) {
+    activeTab = tab;
+    document.querySelectorAll('.m3-nav-item').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById(tab === 'home' ? 'panelHome' : tab === 'record' ? 'panelRecord' : 'panelStudents').classList.add('active');
+    document.getElementById('topBarTitle').textContent = TAB_NAMES[tab];
+
+    if (tab === 'record' && !recordLoadedOnce) { recordLoadedOnce = true; loadRecordDay(recordDate); }
+    if (tab === 'students' && !studentsLoadedOnce) { studentsLoadedOnce = true; loadClassView(); }
+  }
+
+  document.getElementById('refreshBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('refreshBtn');
+    btn.classList.add('spinning');
+    dataCache = {};
+    try {
+      if (activeTab === 'home') await loadHome();
+      else if (activeTab === 'record') await loadRecordDay(recordDate);
+      else await loadClassView();
+      toast('Synced with database');
+    } finally {
+      btn.classList.remove('spinning');
+    }
+  });
+
+  async function fetchDayData(date) {
+    if (dataCache[date]) return dataCache[date];
+
+    const { data: holChk } = await supabase.from('holidays').select('name').eq('holiday_date', date).maybeSingle();
+    if (holChk) {
+      const result = { holiday: holChk.name, lectures: [], roster: [], attendance: {}, sessions: {} };
+      dataCache[date] = result;
+      return result;
+    }
+
+    const [lecRes, rosterRes] = await Promise.all([
+      supabase.from('daily_schedule')
+        .select(`
+          id, is_cancelled,
+          time_slot:time_slots!time_slot_id (start_time, end_time, slot_label, sort_order),
+          room:rooms!room_id (room_code),
+          subject:subjects!subject_id (subject_name),
+          assigned_faculty:faculty!assigned_faculty_id (full_name)
+        `)
+        .eq('schedule_date', date)
+        .eq('course_id', courseId),
+      supabase.from('students')
+        .select('id, student_id, first_name, middle_name, last_name')
+        .eq('course_id', courseId)
+        .eq('is_active', true)
+        .order('student_id'),
+    ]);
+
+    if (lecRes.error) throw lecRes.error;
+    if (rosterRes.error) throw rosterRes.error;
+
+    const lectures = (lecRes.data || [])
+      .filter(l => !l.is_cancelled)
+      .sort((a, b) => (a.time_slot?.sort_order ?? 999) - (b.time_slot?.sort_order ?? 999));
+    const roster = rosterRes.data || [];
+
+    let attendance = {}, sessions = {};
+    for (const l of lectures) attendance[l.id] = {};
+
+    if (lectures.length) {
+      const dsIds = lectures.map(l => l.id);
+      const [attRes, sessRes] = await Promise.all([
+        supabase.from('student_attendance').select('daily_schedule_id, student_id, status').in('daily_schedule_id', dsIds),
+        supabase.from('attendance_sessions').select('daily_schedule_id, proof_image_url, is_locked').in('daily_schedule_id', dsIds),
+      ]);
+      if (attRes.error) throw attRes.error;
+      if (sessRes.error) throw sessRes.error;
+
+      for (const row of (attRes.data || [])) {
+        if (row.status === 'present' || row.status === 'absent') {
+          attendance[row.daily_schedule_id][row.student_id] = row.status;
+        }
+      }
+      for (const row of (sessRes.data || [])) {
+        sessions[row.daily_schedule_id] = { proof_image_url: row.proof_image_url, is_locked: row.is_locked };
+      }
+    }
+
+    const result = { holiday: null, lectures, roster, attendance, sessions };
+    dataCache[date] = result;
+    return result;
+  }
+
+  function summarize(day, dsId) {
+    const map = day.attendance[dsId] || {};
+    let present = 0, absent = 0;
+    for (const s of day.roster) {
+      if (map[s.id] === 'present') present++;
+      else if (map[s.id] === 'absent') absent++;
+    }
+    return { present, absent, notMarked: day.roster.length - present - absent, total: day.roster.length };
+  }
+
+  function renderLectureCards(containerId, day, onOpen) {
+    const area = document.getElementById(containerId);
+    if (day.holiday) {
+      area.innerHTML = `<div style="text-align:center; padding:3rem 1rem; color:var(--md-sys-color-outline);">🌴 Holiday: ${day.holiday}</div>`;
+      return;
+    }
+    if (!day.lectures.length) {
+      area.innerHTML = `<div style="text-align:center; padding:3rem 1rem; color:var(--md-sys-color-outline);">No scheduled lectures found.</div>`;
+      return;
+    }
+
+    area.innerHTML = `<div class="card-grid">${day.lectures.map(l => {
+      const stats = summarize(day, l.id);
+      const isComplete = stats.notMarked === 0 && stats.total > 0;
+      const isLocked = day.sessions[l.id]?.is_locked;
+      const hasProof = !!day.sessions[l.id]?.proof_image_url;
+
+      return `
+        <div class="m3-card ${isComplete ? 'card-verified' : 'card-pending'}" data-id="${l.id}">
+          <div class="card-header-row">
+            <span class="card-time-pill">${l.time_slot?.slot_label || 'Virtual Slot'}</span>
+            ${isLocked ? '<span style="font-size:0.8rem">🔒 Locked</span>' : ''}
+          </div>
+          <div class="card-subject">${l.subject?.subject_name || 'Unassigned Subject'}</div>
+          <div class="card-meta-text">${l.assigned_faculty?.full_name || 'Faculty TBD'} · Room ${l.room?.room_code || '—'}</div>
+          <div class="card-badges-row">
+            <span class="m3-chip ${isComplete ? 'chip-success' : 'chip-warning'}">
+              ${stats.total ? `${stats.present}/${stats.total} Present` : 'No Roster'}
+            </span>
+            <span class="m3-chip ${hasProof ? 'chip-success' : 'chip-error'}">
+              ${hasProof ? '📷 Sheet Added' : '📷 Sheet Missing'}
+            </span>
+          </div>
+        </div>
+      `;
+    }).join('')}</div>`;
+
+    area.querySelectorAll('.m3-card').forEach(c => {
+      c.addEventListener('click', () => onOpen(c.dataset.id));
+    });
+  }
+
+  // ══════════════════ TAB 1: HOME ══════════════════
+  async function loadHome() {
+    document.getElementById('homeDateLabel').textContent = friendlyDate(TODAY);
+    try {
+      const day = await fetchDayData(TODAY);
+      const total = day.lectures.length;
+      const fullyMarked = day.lectures.filter(l => summarize(day, l.id).notMarked === 0 && summarize(day, l.id).total > 0).length;
+      const pending = total - fullyMarked;
+
+      document.getElementById('homeStats').innerHTML = `
+        <div class="m3-stat-card"><div class="m3-stat-val">${total}</div><div class="m3-stat-lbl">Lectures</div></div>
+        <div class="m3-stat-card"><div class="m3-stat-val" style="color:var(--md-sys-color-success);">${fullyMarked}</div><div class="m3-stat-lbl">Submitted</div></div>
+        <div class="m3-stat-card"><div class="m3-stat-val" style="color:var(--md-sys-color-error);">${pending}</div><div class="m3-stat-lbl">Pending</div></div>
+      `;
+
+      renderLectureCards('homeLectureArea', day, (dsId) => {
+        openModal(TODAY, dsId);
+      });
+    } catch (e) {
+      toast(e.message);
+    }
+  }
+
+  // ══════════════════ TAB 2: RECORD ══════════════════
+  let recordDate = TODAY;
+  let recordLoadedOnce = false;
+
+  flatpickr('#attDatePicker', {
+    dateFormat: 'Y-m-d', defaultDate: TODAY, disableMobile: true,
+    onChange: async ([d]) => {
+      if (!d) return;
+      recordDate = localDateStr(d);
+      await loadRecordDay(recordDate);
+    }
+  });
+
+  async function loadRecordDay(date) {
+    document.getElementById('lectureArea').innerHTML = `<div class="m3-skeleton-card"></div>`;
+    try {
+      const day = await fetchDayData(date);
+      renderLectureCards('lectureArea', day, (dsId) => openModal(recordDate, dsId));
+    } catch (e) {
+      toast(e.message);
+    }
+  }
+
+  // ══════════════════ MODAL: ATTENDANCE SUBMISSION ══════════════════
+  let activeDate = null, activeLectureId = null, modalSearch = '';
+
+  function openModal(date, dsId) {
+    activeDate = date;
+    activeLectureId = dsId;
+    modalSearch = '';
+    document.getElementById('attModalBack').classList.add('open');
+    renderModal();
+  }
+
+  function closeModal() {
+    document.getElementById('attModalBack').classList.remove('open');
+    activeLectureId = null;
+  }
+  document.getElementById('mCloseBtn').addEventListener('click', closeModal);
+  document.getElementById('mCloseBtn2').addEventListener('click', closeModal);
+
+  function renderModal() {
+    const day = dataCache[activeDate];
+    const dsId = activeLectureId;
+    const lecture = day.lectures.find(l => l.id === dsId);
+    const { present, absent, notMarked } = summarize(day, dsId);
+    const sess = day.sessions[dsId] || {};
+    const locked = !!sess.is_locked;
+
+    document.getElementById('mTitle').textContent = lecture.subject?.subject_name || 'Class Attendance';
+    document.getElementById('mSub').textContent = `${friendlyDate(activeDate)} · ${lecture.time_slot?.slot_label || 'Virtual Slot'}`;
+    document.getElementById('mLockInfo').innerHTML = locked ? `<span class="m3-chip chip-error">🔒 Read-only</span>` : '';
+    document.getElementById('mSaveBtn').style.display = locked ? 'none' : 'inline-flex';
+
+    const body = document.getElementById('mBody');
+    let roster = [...day.roster];
+    if (modalSearch) {
+      const q = modalSearch.toLowerCase();
+      roster = roster.filter(s => `${s.student_id} ${fullName(s)}`.toLowerCase().includes(q));
+    }
+
+    body.innerHTML = `
+      <!-- Quick Batch Actions -->
+      ${!locked ? `
+      <div class="quick-actions-bar">
+        <button class="m3-tonal-btn" id="markAllPresentBtn">✓ All Present</button>
+        <button class="m3-tonal-btn" id="markAllAbsentBtn">✗ All Absent</button>
+        <button class="m3-tonal-btn" id="clearAllBtn" style="color:var(--md-sys-color-outline);">Reset</button>
+      </div>` : ''}
+
+      <!-- Search Input -->
+      <div class="m3-search-bar" style="margin-bottom:1rem;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="mSearchInput" placeholder="Filter student roll or name..." value="${modalSearch}"/>
+      </div>
+
+      <div style="font-size:0.75rem; font-weight:700; color:var(--md-sys-color-on-surface-variant); margin-bottom:0.6rem; display:flex; justify-content:space-between;">
+        <span>Students (${roster.length})</span>
+        <span>${present} Present · ${absent} Absent · ${notMarked} Unmarked</span>
+      </div>
+
+      <div class="roster-list">
+        ${roster.map(s => {
+          const status = day.attendance[dsId][s.id];
+          const isP = status === 'present', isA = status === 'absent';
+          const label = isP ? 'Present' : isA ? 'Absent' : 'Unmarked';
+          const cls = isP ? 'is-present' : isA ? 'is-absent' : 'is-unmarked';
+
+          return `
+            <div class="m3-roster-item">
+              <div style="min-width:0;">
+                <div class="m3-roster-name">${fullName(s)}</div>
+                <div class="m3-roster-id">${s.student_id}</div>
+              </div>
+              <button class="att-state-btn ${cls}" data-id="${s.id}" ${locked ? 'disabled' : ''}>
+                ${label}
+              </button>
+            </div>
+          `;
+        }).join('')}
+      </div>
+
+      <!-- Proof Image Upload Section -->
+      <div style="margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--md-sys-color-surface-container-highest);">
+        <div style="font-size:0.86rem; font-weight:700; margin-bottom:0.5rem;">Paper Attendance Proof</div>
+        <div style="display:flex; align-items:center; gap:1rem;">
+          ${sess.proof_image_url ? `
+            <a href="${sess.proof_image_url}" target="_blank">
+              <img src="${sess.proof_image_url}" style="width:72px; height:72px; object-fit:cover; border-radius:12px; border:1px solid var(--md-sys-color-outline-variant);" />
+            </a>
+          ` : `<div style="width:72px; height:72px; border-radius:12px; border:2px dashed var(--md-sys-color-outline-variant); display:flex; align-items:center; justify-content:center; font-size:0.68rem; color:var(--md-sys-color-outline);">No photo</div>`}
+          
+          ${!locked ? `
+          <div style="display:flex; flex-direction:column; gap:0.4rem;">
+            <input type="file" id="proofInput" accept="image/*" style="font-size:0.75rem;" />
+            <button class="m3-btn-outlined" id="proofUploadBtn" style="height:36px; font-size:0.78rem;">Upload Document</button>
+          </div>` : ''}
+        </div>
+      </div>
+    `;
+
+    if (locked) return;
+
+    // Search event
+    document.getElementById('mSearchInput').addEventListener('input', (e) => {
+      modalSearch = e.target.value;
+      renderModal();
+      const inp = document.getElementById('mSearchInput');
+      inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length);
+    });
+
+    // Tri-State cycle toggle (Unmarked -> Present -> Absent -> Unmarked)
+    body.querySelectorAll('.att-state-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const sid = btn.dataset.id;
+        const curr = day.attendance[dsId][sid];
+        day.attendance[dsId][sid] = !curr ? 'present' : curr === 'present' ? 'absent' : null;
+        renderModal();
+      });
+    });
+
+    // Quick Action Handlers
+    document.getElementById('markAllPresentBtn').addEventListener('click', () => {
+      day.roster.forEach(s => day.attendance[dsId][s.id] = 'present');
+      renderModal();
+    });
+    document.getElementById('markAllAbsentBtn').addEventListener('click', () => {
+      day.roster.forEach(s => day.attendance[dsId][s.id] = 'absent');
+      renderModal();
+    });
+    document.getElementById('clearAllBtn').addEventListener('click', () => {
+      day.roster.forEach(s => delete day.attendance[dsId][s.id]);
+      renderModal();
+    });
+
+    document.getElementById('proofUploadBtn').addEventListener('click', () => handleProofUpload(day, dsId));
+  }
+
+  // Save Attendance to Supabase
+  document.getElementById('mSaveBtn').addEventListener('click', async () => {
+    const day = dataCache[activeDate];
+    const dsId = activeLectureId;
+    const btn = document.getElementById('mSaveBtn');
+    btn.disabled = true;
+
+    try {
+      const rows = day.roster.map(s => ({
+        daily_schedule_id: dsId,
+        student_id: s.id,
+        status: day.attendance[dsId][s.id] || 'absent',
+        marked_by: session.user.id,
+        marked_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }));
+
+      const { error } = await supabase.from('student_attendance')
+        .upsert(rows, { onConflict: 'daily_schedule_id,student_id' });
+      if (error) throw error;
+
+      toast('Attendance saved successfully');
+      if (activeTab === 'home') loadHome(); else renderLectureCards('lectureArea', day, (id) => openModal(recordDate, id));
+      closeModal();
+    } catch (e) {
+      toast(e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // Upload proof to Cloudinary
+  async function handleProofUpload(day, dsId) {
+    const file = document.getElementById('proofInput')?.files[0];
+    if (!file) { toast('Please pick an image first'); return; }
+    const btn = document.getElementById('proofUploadBtn');
+    btn.disabled = true; btn.textContent = 'Uploading...';
+
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('upload_preset', UPLOAD_PRESET);
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: 'POST', body: fd });
+      if (!res.ok) throw new Error('Cloudinary upload failure');
+      const data = await res.json();
+
+      const { error } = await supabase.from('attendance_sessions')
+        .upsert({ daily_schedule_id: dsId, proof_image_url: data.secure_url, updated_at: new Date().toISOString() }, { onConflict: 'daily_schedule_id' });
+      if (error) throw error;
+
+      if (!day.sessions[dsId]) day.sessions[dsId] = { proof_image_url: data.secure_url, is_locked: false };
+      else day.sessions[dsId].proof_image_url = data.secure_url;
+
+      toast('Photo proof uploaded');
+      renderModal();
+    } catch (e) {
+      toast(e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // ══════════════════ TAB 3: ROSTER DIRECTORY ══════════════════
+  let studentsLoadedOnce = false, classRows = [], classTotal = 0, activeFilter = 'all';
+
+  document.getElementById('studentSearch').addEventListener('input', renderStudents);
+  document.getElementById('sortSelect').addEventListener('change', renderStudents);
+  document.querySelectorAll('.m3-filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.m3-filter-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      activeFilter = chip.dataset.filter;
+      renderStudents();
+    });
+  });
+
+  async function loadClassView() {
+    const area = document.getElementById('viewArea');
+    area.innerHTML = `<div class="m3-skeleton-card"></div><div class="m3-skeleton-card"></div>`;
+    try {
+      const { rows, totalLectures } = await getClassAttendanceOverview(courseId, null, null);
+      classRows = rows;
+      classTotal = totalLectures;
+      renderStudents();
+    } catch (e) {
+      toast(e.message);
+    }
+  }
+
+  function renderStudents() {
+    const area = document.getElementById('viewArea');
+    if (!classTotal) {
+      area.innerHTML = `<div style="text-align:center; padding:3rem 1rem; color:var(--md-sys-color-outline);">No lecture history recorded yet.</div>`;
+      return;
+    }
+
+    const term = document.getElementById('studentSearch').value.toLowerCase();
+    const sort = document.getElementById('sortSelect').value;
+    const limit = activeFilter === '75' ? 75 : activeFilter === '50' ? 50 : 101;
+
+    let filtered = classRows.filter(r => r.pct < limit);
+    if (term) filtered = filtered.filter(r => `${r.student.student_id} ${studentName(r.student)}`.toLowerCase().includes(term));
+
+    filtered.sort((a, b) => {
+      if (sort === 'name_asc') return studentName(a.student).localeCompare(studentName(b.student));
+      if (sort === 'name_desc') return studentName(b.student).localeCompare(studentName(a.student));
+      if (sort === 'id_asc') return a.student.student_id.localeCompare(b.student.student_id, undefined, { numeric: true });
+      if (sort === 'id_desc') return b.student.student_id.localeCompare(a.student.student_id, undefined, { numeric: true });
+      if (sort === 'pct_asc') return a.pct - b.pct;
+      if (sort === 'pct_desc') return b.pct - a.pct;
+      return 0;
+    });
+
+    document.getElementById('studentsMeta').textContent = `${filtered.length} of ${classRows.length} students listed`;
+
+    area.innerHTML = filtered.map(r => {
+      const pctType = r.pct >= 75 ? 'pct-high' : r.pct >= 50 ? 'pct-med' : 'pct-low';
+      return `
+        <div class="student-card" data-id="${r.student.id}">
+          <div class="sc-info">
+            <div class="sc-roll">${r.student.student_id}</div>
+            <div class="sc-name">${studentName(r.student)}</div>
+            <div class="sc-meta">${r.present} Present · ${r.absent} Absent (${classTotal} Total)</div>
+          </div>
+          <div class="m3-percent-badge ${pctType}">
+            ${r.pct}%
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    area.querySelectorAll('.student-card').forEach(card => {
+      card.addEventListener('click', () => openStudentHistory(card.dataset.id));
+    });
+  }
+
+  async function openStudentHistory(studentId) {
+    const row = classRows.find(r => r.student.id === studentId);
+    document.getElementById('histModalBack').classList.add('open');
+    document.getElementById('hTitle').textContent = row ? studentName(row.student) : 'History';
+    document.getElementById('hSub').textContent = row ? `${row.student.student_id} · ${row.pct}% aggregate` : '';
+    const body = document.getElementById('hBody');
+    body.innerHTML = `<div class="m3-skeleton-card"></div>`;
+
+    try {
+      const { rows } = await getStudentAttendanceHistory(studentId, courseId, null, null);
+      if (!rows.length) { body.innerHTML = '<div style="text-align:center; padding:2rem;">No lectures attended yet.</div>'; return; }
+
+      body.innerHTML = rows.map(r => `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid var(--md-sys-color-surface-container-highest);">
+          <div>
+            <div style="font-weight:700; font-size:0.88rem;">${r.subject?.subject_name || 'Lecture'}</div>
+            <div style="font-size:0.72rem; color:var(--md-sys-color-on-surface-variant);">${fmtDate(r.schedule_date)} · ${fmtTime(r.time_slot?.start_time)}</div>
+          </div>
+          <span class="m3-chip ${r.status === 'present' ? 'chip-success' : 'chip-error'}">
+            ${r.status === 'present' ? 'Present' : 'Absent'}
+          </span>
+        </div>
+      `).join('');
+    } catch (e) {
+      toast(e.message);
+    }
+  }
+
+  document.getElementById('hCloseBtn').addEventListener('click', () => {
+    document.getElementById('histModalBack').classList.remove('open');
+  });
+
+  // Initialize
+  await loadHome();
+</script>
+</body>
+</html>

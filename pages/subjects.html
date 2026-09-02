@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>ASAS — Subjects</title>
+  
+  <link rel="stylesheet" href="/css/theme.css"/>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+  <style>
+    /* Professional Filter Card */
+    .filter-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; box-shadow: 0 2px 8px rgba(0,0,0,0.02); transition: background 0.25s, border-color 0.25s; }
+    
+    .table-search { padding: 0.55rem 1rem; border-radius: 8px; border: 1px solid var(--border); width: 100%; min-width: 300px; background: var(--bg-input); color: var(--text-primary); outline: none; transition: border-color 0.2s; font-family: var(--ff-body); }
+    .table-search:focus { border-color: var(--accent); }
+    
+    .export-btns { display: flex; gap: 0.5rem; align-items: center; }
+    .btn-export { display: flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-primary); font-size: 0.85rem; cursor: pointer; transition: background 0.2s; font-weight: 500; height: 38px; }
+    .btn-export:hover { background: var(--bg-hover); }
+
+    /* Professional Table Styles */
+    .table-wrap { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { background: rgba(127,127,200,0.04); padding: 0.85rem 1rem; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+    td { padding: 0.9rem 1rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; vertical-align: middle; color: var(--text-primary); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--bg-hover); }
+    
+    th.sortable { cursor: pointer; position: relative; padding-right: 1.5rem !important; user-select: none; transition: background 0.2s; }
+    th.sortable:hover { background: rgba(0,0,0,0.04); }
+    th.sortable::after { content: '↕'; position: absolute; right: 0.4rem; color: var(--text-muted); opacity: 0.4; font-size: 0.9rem; font-weight: normal; }
+
+    /* Modal Styles */
+    .modal-back { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); z-index: 200; align-items: center; justify-content: center; padding: 1rem; }
+    .modal-back.open { display: flex; }
+    .modal { background: var(--bg-card); width: 100%; max-width: 450px; border-radius: 16px; border: 1px solid var(--border); box-shadow: var(--shadow-modal); animation: mIn 0.2s ease both; }
+    @keyframes mIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+    .modal-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .modal-title { font-family: var(--ff-display); font-size: 1.2rem; font-weight: 600; color: var(--text-primary); }
+    .modal-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; }
+    .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 0.75rem; }
+    
+    /* Inputs inside modal */
+    .modal-input { width: 100%; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-primary); font-family: var(--ff-body); outline: none; transition: border-color 0.2s; }
+    .modal-input:focus { border-color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-college" id="sidebarCollege"></div>
+  <nav id="sideNav"></nav>
+  <div class="sidebar-footer">
+    <div class="theme-row">
+      <span class="theme-label"><span id="themeIcon"><svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span><span id="themeLabel">Light mode</span></span>
+      <label class="toggle-switch"><input type="checkbox" id="themeToggle"/><span class="toggle-track"></span></label>
+    </div>
+    <div class="user-pill">
+      <div class="user-avatar" id="userAvatar">?</div>
+      <div class="user-info"><div class="user-name" id="userName">…</div><div class="user-role" id="userRole">admin</div></div>
+      <button class="btn-logout" id="logoutBtn" title="Sign out"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div>
+      <h1 class="page-title">Subjects</h1>
+      <p class="page-subtitle">Manage all college subjects and their respective codes</p>
+    </div>
+  </div>
+  
+  <div class="content">
+    <!-- Professional Filter Card -->
+    <div class="filter-card">
+      <div style="flex: 1;">
+        <input type="text" id="searchInput" class="table-search" placeholder="🔍 Search subject name or code..." />
+      </div>
+      <div class="export-btns">
+        <button class="btn-export" id="exportExcelBtn">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> Excel
+        </button>
+        <button class="btn-export" id="exportPdfBtn">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15h2v4H9z"/><path d="M13 15h3v4"/><path d="M13 17h2"/></svg> PDF
+        </button>
+        <button class="btn btn-primary" id="addBtn" style="height: 38px;">+ Add Subject</button>
+      </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="table-wrap">
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th class="sortable">Subject Code</th>
+            <th class="sortable" data-sort="asc">Subject Name</th>
+            <th>Status</th>
+            <th style="width:100px;text-align:right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr class="empty-row"><td colspan="4" style="text-align:center; padding: 2rem;"><span class="spin"></span> Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- Subject Modal -->
+<div class="modal-back" id="subjectModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Add Subject</div>
+      <button class="btn-icon" id="modalClose" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--text-muted);">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Subject Code</label>
+        <input type="text" id="subjectCode" class="modal-input" placeholder="e.g. ACC101" />
+      </div>
+      <div class="field">
+        <label>Subject Name *</label>
+        <input type="text" id="subjectName" class="modal-input" placeholder="e.g. Financial Accounting" required />
+      </div>
+      <div class="field" style="flex-direction:row;align-items:center;gap:0.75rem;margin-top:0.5rem">
+        <label class="toggle-switch"><input type="checkbox" id="isActive" checked/><span class="toggle-track"></span></label>
+        <label style="margin:0; font-weight:600; color:var(--text-primary)">Active</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="modalCancel">Cancel</button>
+      <button class="btn btn-primary" id="modalSave">Save Subject</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+  import { requireRole } from '/js/auth/session.js';
+  import { initSidebar } from '/js/components/sidebar.js';
+  import { supabase } from '/js/config/supabase.js';
+  import { exportToExcel, exportToPDF, preloadLogoForPDF } from '/js/utils/exportHelpers.js';
+
+  const session = await requireRole('admin');
+  // Pass the correct active menu item if it exists in your sidebar.js
+  initSidebar(session, 'subjects'); 
+  preloadLogoForPDF();
+  const generatedBy = session?.profile?.full_name ?? 'Admin';
+
+  function toast(msg, type='success') {
+    const c=document.getElementById('toast');
+    const el=document.createElement('div');
+    el.className=`toast-item ${type}`; el.textContent=msg;
+    c.appendChild(el); setTimeout(()=>el.remove(),4000);
+  }
+
+  let subjectsData = [];
+  let filteredData = [];
+  let currentId = null;
+
+  // ── 1. Fetch Data ──────────────────────────────────────────────────
+  async function loadData() {
+    try {
+      const { data, error } = await supabase.from('subjects')
+        .select('id, subject_name, subject_code, is_active')
+        .order('subject_name');
+      
+      if (error) throw error;
+
+      subjectsData = data;
+      applyFilters();
+    } catch(e) {
+      toast(e.message, 'error');
+      document.getElementById('tableBody').innerHTML = `<tr class="empty-row"><td colspan="4" style="text-align:center; padding: 2rem; color:var(--error);">Error loading data</td></tr>`;
+    }
+  }
+
+  // ── 2. Render & Filter Logic ───────────────────────────────────────
+  function applyFilters() {
+    const fSearch = document.getElementById('searchInput').value.toLowerCase();
+
+    filteredData = subjectsData.filter(r => {
+      if (fSearch) {
+        const textStr = `${r.subject_code||''} ${r.subject_name||''}`.toLowerCase();
+        if (!textStr.includes(fSearch)) return false;
+      }
+      return true;
+    });
+
+    renderTable();
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('tableBody');
+    if (!filteredData.length) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="4" style="text-align:center; padding: 3rem; color:var(--text-muted);">No subjects match your search.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filteredData.map(r => `
+      <tr>
+        <td style="color:var(--accent); font-weight:600;">${r.subject_code || '—'}</td>
+        <td style="font-weight:600;">${r.subject_name || '—'}</td>
+        <td><span class="badge ${r.is_active ? 'badge-active' : 'badge-inactive'}">${r.is_active ? 'Active' : 'Inactive'}</span></td>
+        <td style="text-align:right">
+          <button class="btn btn-ghost btn-sm edit-btn" data-id="${r.id}">Edit</button>
+        </td>
+      </tr>
+    `).join('');
+
+    bindActions();
+  }
+
+  // Bind Search
+  document.getElementById('searchInput').addEventListener('input', applyFilters);
+
+  // Table Column Sorting
+  document.querySelectorAll('th.sortable').forEach((th, i) => {
+    th.title = "Click to sort column";
+    th.addEventListener('click', () => {
+      const tbody = document.getElementById('tableBody');
+      const rows = Array.from(tbody.querySelectorAll('tr:not(.empty-row)'));
+      if(!rows.length) return;
+      
+      const isAsc = th.dataset.sort !== 'asc';
+      th.dataset.sort = isAsc ? 'asc' : 'desc';
+      
+      rows.sort((a, b) => {
+        const aTxt = a.children[i]?.textContent.trim() || '';
+        const bTxt = b.children[i]?.textContent.trim() || '';
+        return isAsc ? aTxt.localeCompare(bTxt, undefined, {numeric: true}) 
+                     : bTxt.localeCompare(aTxt, undefined, {numeric: true});
+      });
+      rows.forEach(r => tbody.appendChild(r));
+    });
+  });
+
+  // ── 3. Exports ─────────────────────────────────────────────────────
+  document.getElementById('exportPdfBtn').addEventListener('click', () => {
+    if (!filteredData.length) return toast('No data to export', 'warn');
+    const flat = filteredData.map(r => ({
+      code: r.subject_code || '—',
+      name: r.subject_name || '—',
+      status: r.is_active ? 'Active' : 'Inactive'
+    }));
+    const cols = [
+      { header: 'Subject Code', key: 'code', width: 30 },
+      { header: 'Subject Name', key: 'name', width: 60 },
+      { header: 'Status', key: 'status', width: 20 }
+    ];
+    exportToPDF(flat, cols, 'Subject List', 'Subjects_Report', '', generatedBy);
+  });
+
+  document.getElementById('exportExcelBtn').addEventListener('click', () => {
+    if (!filteredData.length) return toast('No data to export', 'warn');
+    const flat = filteredData.map(r => ({
+      code: r.subject_code || '—',
+      name: r.subject_name || '—',
+      status: r.is_active ? 'Active' : 'Inactive'
+    }));
+    exportToExcel(flat, [
+      { header: 'Subject Code', key: 'code', width: 15 },
+      { header: 'Subject Name', key: 'name', width: 45 },
+      { header: 'Status', key: 'status', width: 12 }
+    ], 'Subjects_Report');
+  });
+
+  // ── 4. Modal Logic ─────────────────────────────────────────────────
+  function openModal(id = null) {
+    currentId = id;
+    document.getElementById('modalTitle').textContent = id ? 'Edit Subject' : 'Add Subject';
+    
+    if (id) {
+      const row = subjectsData.find(r => r.id === id);
+      document.getElementById('subjectCode').value = row.subject_code || '';
+      document.getElementById('subjectName').value = row.subject_name || '';
+      document.getElementById('isActive').checked = row.is_active;
+    } else {
+      document.getElementById('subjectCode').value = '';
+      document.getElementById('subjectName').value = '';
+      document.getElementById('isActive').checked = true;
+    }
+    
+    document.getElementById('subjectModal').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('subjectModal').classList.remove('open');
+    currentId = null;
+  }
+
+  document.getElementById('addBtn').addEventListener('click', () => openModal());
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  document.getElementById('modalCancel').addEventListener('click', closeModal);
+
+  document.getElementById('modalSave').addEventListener('click', async () => {
+    const subject_code = document.getElementById('subjectCode').value.trim();
+    const subject_name = document.getElementById('subjectName').value.trim();
+    const is_active = document.getElementById('isActive').checked;
+
+    if (!subject_name) {
+      toast('Subject Name is required', 'warn'); return;
+    }
+
+    // Set code to null if empty to avoid empty string constraints (if any)
+    const payload = { 
+      subject_code: subject_code || null, 
+      subject_name, 
+      is_active 
+    };
+
+    const btn = document.getElementById('modalSave');
+    btn.disabled = true;
+
+    try {
+      if (currentId) {
+        const { error } = await supabase.from('subjects').update(payload).eq('id', currentId);
+        if (error) throw error;
+        toast('Subject updated successfully');
+      } else {
+        const { error } = await supabase.from('subjects').insert(payload);
+        if (error) throw error;
+        toast('Subject created successfully');
+      }
+      closeModal();
+      await loadData();
+    } catch(e) {
+      toast(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  function bindActions() {
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => openModal(e.currentTarget.dataset.id));
+    });
+  }
+
+  // Init
+  loadData();
+</script>
+</body>
+</html>

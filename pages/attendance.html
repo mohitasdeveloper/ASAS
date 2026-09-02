@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>ASAS — Attendance</title>
+
+  <link rel="stylesheet" href="/css/theme.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+  <style>
+    .filter-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem; display: flex; align-items: flex-end; gap: 1rem; flex-wrap: wrap; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+    .filter-field { display: flex; flex-direction: column; gap: 0.35rem; min-width: 200px; }
+    .filter-field label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); }
+    .filter-input, .filter-select { padding: 0.6rem 0.85rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-primary); font-family: var(--ff-body); outline: none; }
+    .filter-input:focus, .filter-select:focus { border-color: var(--accent); }
+
+    .day-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .day-status { display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; color: var(--text-muted); }
+    .day-status .lock-badge { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.7rem; border-radius: 20px; background: rgba(224,92,107,.14); color: var(--error); font-weight: 700; font-size: 0.78rem; }
+    .day-actions { display: flex; gap: 0.5rem; }
+    .btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+
+    .table-wrap { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.02); margin-bottom: 1.5rem; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { background: rgba(127,127,200,0.04); padding: 0.85rem 1rem; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+    td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; vertical-align: middle; color: var(--text-primary); }
+    tr:last-child td { border-bottom: none; }
+
+    .lecture-row { cursor: pointer; transition: background 0.15s; }
+    .lecture-row:hover td { filter: brightness(0.97); }
+    .lr-time { font-weight: 700; color: var(--accent); font-size: 0.8rem; white-space: nowrap; }
+    .lr-none  td { background: transparent; }
+    .lr-red   td { background: rgba(224,92,107,.10); }
+    .lr-green td { background: rgba(62,207,142,.10); }
+    .lr-lock-icon { margin-left: 0.4rem; }
+
+    .mark-badge { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.65rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+    .mark-full { background: rgba(62,207,142,.18); color: var(--success); }
+    .mark-partial { background: rgba(245,166,35,.18); color: var(--warn); }
+    .mark-none { background: rgba(127,127,127,0.1); color: var(--text-muted); }
+    .img-badge { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.72rem; font-weight: 700; }
+    .img-yes { background: rgba(62,207,142,.18); color: var(--success); }
+    .img-no { background: rgba(224,92,107,.14); color: var(--error); }
+
+    /* ── Modal ─────────────────────────────────────────────── */
+    .modal-back { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); z-index: 200; align-items: center; justify-content: center; padding: 1rem; }
+    .modal-back.open { display: flex; }
+    .att-modal { background: var(--bg-card); width: 100%; max-width: 720px; max-height: 88vh; border-radius: 16px; border: 1px solid var(--border); box-shadow: var(--shadow-modal); display: flex; flex-direction: column; overflow: hidden; }
+    .att-modal-header { padding: 1.1rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+    .att-modal-title { font-family: var(--ff-display); font-size: 1.1rem; font-weight: 700; color: var(--text-primary); }
+    .att-modal-sub { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem; }
+    .att-modal-body { padding: 1.25rem 1.5rem; overflow-y: auto; flex: 1; scrollbar-width: none; -ms-overflow-style: none; }
+    .att-modal-body::-webkit-scrollbar { display: none; width: 0; height: 0; }
+    .att-modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+
+    .roster-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.85rem; }
+    .roster-summary { display: flex; gap: 0.6rem; flex-wrap: wrap; font-size: 0.8rem; }
+    .sum-chip { display: flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.7rem; border-radius: 20px; background: var(--bg-body); border: 1px solid var(--border); }
+    .sum-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+    .roster-search-row { display: flex; gap: 0.6rem; margin-bottom: 0.85rem; flex-wrap: wrap; }
+    .roster-search { flex: 1; min-width: 180px; padding: 0.55rem 0.85rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-primary); font-family: var(--ff-body); outline: none; }
+    .roster-search:focus { border-color: var(--accent); }
+
+    .roster-table th.sortable { cursor: pointer; user-select: none; position: relative; padding-right: 1.4rem; }
+    .roster-table th.sortable::after { content: '↕'; position: absolute; right: 0.4rem; opacity: 0.4; }
+
+    .status-btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 1rem; border-radius: 20px; font-size: 0.78rem; font-weight: 700; cursor: pointer; user-select: none; border: 1px solid transparent; transition: all 0.15s; }
+    .status-btn:hover { filter: brightness(0.97); }
+    .sb-not_marked { background: rgba(127,127,127,0.08); color: var(--text-muted); border-color: var(--border); }
+    .sb-present    { background: rgba(62,207,142,.16); color: var(--success); }
+    .sb-absent     { background: rgba(224,92,107,.18); color: var(--error); }
+    .sb-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+    .proof-section { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px dashed var(--border); }
+    .proof-title { font-size: 0.85rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.75rem; }
+    .proof-row { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .proof-preview { width: 90px; height: 90px; border-radius: 10px; object-fit: cover; border: 1px solid var(--border); background: var(--bg-body); }
+    .proof-empty { width: 90px; height: 90px; border-radius: 10px; border: 1px dashed var(--border); display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.72rem; text-align: center; padding: 0.4rem; }
+    .lock-pill { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.7rem; border-radius: 20px; background: rgba(224,92,107,.14); color: var(--error); font-weight: 700; font-size: 0.75rem; }
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-college" id="sidebarCollege"></div>
+  <nav id="sideNav"></nav>
+  <div class="sidebar-footer">
+    <div class="theme-row">
+      <span class="theme-label"><span id="themeIcon"><svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span><span id="themeLabel">Light mode</span></span>
+      <label class="toggle-switch"><input type="checkbox" id="themeToggle"/><span class="toggle-track"></span></label>
+    </div>
+    <div class="user-pill">
+      <div class="user-avatar" id="userAvatar">?</div>
+      <div class="user-info"><div class="user-name" id="userName">…</div><div class="user-role" id="userRole">admin</div></div>
+      <button class="btn-logout" id="logoutBtn" title="Sign out"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div>
+      <h1 class="page-title">Attendance</h1>
+      <p class="page-subtitle">Record student attendance for any scheduled lecture</p>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="filter-card">
+      <div class="filter-field">
+        <label>Date</label>
+        <input type="text" id="attDatePicker" class="filter-input" placeholder="Select date" readonly />
+      </div>
+      <div class="filter-field" style="min-width:260px">
+        <label>Course (optional filter)</label>
+        <select id="courseSelect" class="filter-select"><option value="">All Courses</option></select>
+      </div>
+      <button class="btn btn-primary" id="loadBtn" style="height: 40px;">Load</button>
+    </div>
+
+    <div id="lectureArea">
+      <div style="text-align:center; padding:3rem; color:var(--text-muted);">Select a date, then click Load to see the day's lectures.</div>
+    </div>
+  </div>
+</main>
+
+<div class="modal-back" id="attModalBack">
+  <div class="att-modal">
+    <div class="att-modal-header">
+      <div>
+        <div class="att-modal-title" id="mTitle">—</div>
+        <div class="att-modal-sub" id="mSub">—</div>
+      </div>
+      <button id="mCloseBtn" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text-muted);">✕</button>
+    </div>
+    <div class="att-modal-body" id="mBody">
+      <!-- filled dynamically -->
+    </div>
+    <div class="att-modal-footer">
+      <div id="mLockInfo"></div>
+      <div style="display:flex; gap:0.6rem;">
+        <button class="btn btn-ghost" id="mCloseBtn2">Close</button>
+        <button class="btn btn-primary" id="mSaveBtn">Save Attendance</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+  import { requireRole } from '/js/auth/session.js';
+  import { initSidebar } from '/js/components/sidebar.js';
+  import { supabase } from '/js/config/supabase.js';
+
+  const session = await requireRole('admin');
+  initSidebar(session, 'attendance');
+
+  const CLOUD_NAME = 'duy7opouq';
+  const UPLOAD_PRESET = 'ASAS_PROOFS';
+
+  function toast(msg, type='success') {
+    const c=document.getElementById('toast');
+    const el=document.createElement('div');
+    el.className=`toast-item ${type}`; el.textContent=msg;
+    c.appendChild(el); setTimeout(()=>el.remove(),4000);
+  }
+
+  function localDateStr(d) {
+    const dt = d ?? new Date();
+    return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+  }
+  function courseLabel(c) {
+    if (!c) return '—';
+    return c.division ? `${c.year} ${c.program} ${c.division}` : `${c.year} ${c.program}`;
+  }
+  function fullName(s) {
+    return [s.first_name, s.middle_name, s.last_name].filter(Boolean).join(' ');
+  }
+
+  let currentDate = localDateStr();
+  let lectures = [];          // ALL daily_schedule rows for the date (optionally course-filtered)
+  let rosterByCourse = {};    // { [courseId]: [students] }
+  let attendance = {};        // { [dsId]: { [studentId]: 'present'|'absent' } }
+  let sessions = {};          // { [dsId]: { proof_image_url, is_locked } }
+  let activeLectureId = null;
+
+  // Modal-local roster search/sort state
+  let modalSearch = '';
+  let modalSort = { field: 'student_id', dir: 'asc' };
+  let pendingFile = null;
+
+  flatpickr('#attDatePicker', {
+    dateFormat: 'Y-m-d', defaultDate: new Date(), disableMobile: true,
+    onChange([d]) { if (d) currentDate = localDateStr(d); }
+  });
+
+  async function loadCourses() {
+    const { data, error } = await supabase.from('courses')
+      .select('id, year, program, division').eq('is_active', true).order('year');
+    if (error) { toast(error.message, 'error'); return; }
+    document.getElementById('courseSelect').innerHTML = `<option value="">All Courses</option>` +
+      (data || []).map(c => `<option value="${c.id}">${courseLabel(c)}</option>`).join('');
+  }
+
+  document.getElementById('loadBtn').addEventListener('click', () => loadDay());
+
+  async function loadDay() {
+    const courseFilter = document.getElementById('courseSelect').value;
+    activeLectureId = null;
+
+    const area = document.getElementById('lectureArea');
+    area.innerHTML = `<div style="text-align:center; padding:3rem;"><span class="spin"></span> Loading...</div>`;
+
+    try {
+      const { data: holChk } = await supabase.from('holidays').select('name').eq('holiday_date', currentDate).maybeSingle();
+      if (holChk) {
+        area.innerHTML = `<div style="text-align:center; padding:3rem; color:var(--text-muted);">🎉 Holiday: ${holChk.name}. No lectures on this day.</div>`;
+        return;
+      }
+
+      let lecQuery = supabase.from('daily_schedule')
+        .select(`
+          id, is_cancelled, course_id,
+          time_slot:time_slot_id(slot_label, start_time, sort_order),
+          room:room_id(room_code),
+          course:course_id(id, year, program, division),
+          subject:subject_id(subject_name),
+          faculty:assigned_faculty_id(full_name)
+        `)
+        .eq('schedule_date', currentDate);
+      if (courseFilter) lecQuery = lecQuery.eq('course_id', courseFilter);
+
+      const { data: lecData, error: lecErr } = await lecQuery;
+      if (lecErr) throw lecErr;
+
+      lectures = (lecData || [])
+        .filter(l => !l.is_cancelled)
+        .sort((a, b) => (a.time_slot?.sort_order ?? 999) - (b.time_slot?.sort_order ?? 999));
+
+      if (!lectures.length) {
+        area.innerHTML = `<div style="text-align:center; padding:3rem; color:var(--text-muted);">No lectures scheduled for this date${courseFilter ? ' and course' : ''}.</div>`;
+        return;
+      }
+
+      const courseIds = [...new Set(lectures.map(l => l.course_id))];
+      const { data: studentRows, error: studErr } = await supabase.from('students')
+        .select('id, student_id, first_name, middle_name, last_name, course_id')
+        .in('course_id', courseIds)
+        .eq('is_active', true)
+        .order('student_id');
+      if (studErr) throw studErr;
+
+      rosterByCourse = {};
+      for (const cId of courseIds) rosterByCourse[cId] = [];
+      for (const s of (studentRows || [])) {
+        if (!rosterByCourse[s.course_id]) rosterByCourse[s.course_id] = [];
+        rosterByCourse[s.course_id].push(s);
+      }
+
+      const dsIds = lectures.map(l => l.id);
+
+      const [attRes, sessRes] = await Promise.all([
+        supabase.from('student_attendance').select('daily_schedule_id, student_id, status').in('daily_schedule_id', dsIds),
+        supabase.from('attendance_sessions').select('daily_schedule_id, proof_image_url, is_locked').in('daily_schedule_id', dsIds),
+      ]);
+      if (attRes.error) throw attRes.error;
+      if (sessRes.error) throw sessRes.error;
+
+      attendance = {};
+      for (const l of lectures) attendance[l.id] = {};
+      for (const row of (attRes.data || [])) {
+        if (row.status === 'present' || row.status === 'absent') {
+          if (!attendance[row.daily_schedule_id]) attendance[row.daily_schedule_id] = {};
+          attendance[row.daily_schedule_id][row.student_id] = row.status;
+        }
+      }
+
+      sessions = {};
+      for (const row of (sessRes.data || [])) {
+        sessions[row.daily_schedule_id] = { proof_image_url: row.proof_image_url, is_locked: row.is_locked };
+      }
+
+      renderPage();
+    } catch (e) {
+      toast(e.message, 'error');
+      area.innerHTML = `<div style="text-align:center; padding:3rem; color:var(--error);">Error loading data.</div>`;
+    }
+  }
+
+  function summarize(dsId) {
+    const l = lectures.find(x => x.id === dsId);
+    const roster = rosterByCourse[l?.course_id] || [];
+    const map = attendance[dsId] || {};
+    let present = 0, absent = 0;
+    for (const s of roster) {
+      if (map[s.id] === 'present') present++;
+      else if (map[s.id] === 'absent') absent++;
+    }
+    return { present, absent, notMarked: roster.length - present - absent, total: roster.length };
+  }
+
+  function isComplete(dsId) {
+    const { total, notMarked } = summarize(dsId);
+    if (total === 0) return null; // no students — not applicable
+    return notMarked === 0 && !!sessions[dsId]?.proof_image_url;
+  }
+
+  function rowColorClass(dsId) {
+    const { total, notMarked } = summarize(dsId);
+    if (total === 0 || notMarked > 0) return 'lr-none';
+    return sessions[dsId]?.proof_image_url ? 'lr-green' : 'lr-red';
+  }
+
+  function markBadge(dsId) {
+    const { present, absent, notMarked, total } = summarize(dsId);
+    if (!total) return `<span class="mark-badge mark-none">No students</span>`;
+    const marked = present + absent;
+    const cls = marked === 0 ? 'mark-none' : marked === total ? 'mark-full' : 'mark-partial';
+    return `<span class="mark-badge ${cls}">${marked}/${total} marked</span>`;
+  }
+
+  function imgBadge(dsId) {
+    const { total } = summarize(dsId);
+    if (!total) return '';
+    const has = !!sessions[dsId]?.proof_image_url;
+    return `<span class="img-badge ${has ? 'img-yes' : 'img-no'}">${has ? '📷 Uploaded' : '📷 No photo'}</span>`;
+  }
+
+  function allLecturesComplete() {
+    const relevant = lectures.filter(l => (rosterByCourse[l.course_id] || []).length > 0);
+    if (!relevant.length) return false;
+    return relevant.every(l => isComplete(l.id) === true);
+  }
+
+  function anyLocked() {
+    return lectures.some(l => sessions[l.id]?.is_locked);
+  }
+
+  function allLocked() {
+    const relevant = lectures.filter(l => (rosterByCourse[l.course_id] || []).length > 0);
+    if (!relevant.length) return false;
+    return relevant.every(l => sessions[l.id]?.is_locked);
+  }
+
+  function renderPage() {
+    const area = document.getElementById('lectureArea');
+    const dayLocked = allLocked();
+    const canLock = allLecturesComplete() && !dayLocked;
+    const canUnlock = anyLocked();
+
+    const rowsHtml = lectures.map(l => `
+      <tr class="lecture-row ${rowColorClass(l.id)}" data-id="${l.id}">
+        <td class="lr-time">${l.time_slot?.slot_label || 'Virtual'}</td>
+        <td>${l.room?.room_code || '—'}</td>
+        <td style="font-weight:600;">${courseLabel(l.course)}</td>
+        <td>${l.subject?.subject_name || '—'}</td>
+        <td>${l.faculty?.full_name || '—'}</td>
+        <td>${markBadge(l.id)}</td>
+        <td>${imgBadge(l.id)} ${sessions[l.id]?.is_locked ? '<span class="lr-lock-icon" title="Locked">🔒</span>' : ''}</td>
+      </tr>
+    `).join('');
+
+    area.innerHTML = `
+      <div class="day-toolbar">
+        <div class="day-status">
+          ${dayLocked ? `<span class="lock-badge">🔒 Day Locked</span>` : `<span>Click any lecture to mark attendance</span>`}
+        </div>
+        <div class="day-actions">
+          <button class="btn btn-ghost btn-sm" id="lockDayBtn" ${canLock ? '' : 'disabled'} title="${canLock ? 'Lock all lectures for this date' : 'Enabled once every lecture is fully marked and has a photo uploaded'}">🔒 Lock Day</button>
+          <button class="btn btn-ghost btn-sm" id="unlockDayBtn" ${canUnlock ? '' : 'disabled'}>🔓 Unlock Day</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Time</th><th>Room</th><th>Course</th><th>Subject</th><th>Faculty</th><th>Attendance</th><th>Proof</th></tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+
+    document.querySelectorAll('.lecture-row').forEach(row => {
+      row.addEventListener('click', () => openModal(row.dataset.id));
+    });
+    document.getElementById('lockDayBtn').addEventListener('click', () => setDayLock(true));
+    document.getElementById('unlockDayBtn').addEventListener('click', () => setDayLock(false));
+  }
+
+  async function setDayLock(lock) {
+    const dsIds = lectures.filter(l => (rosterByCourse[l.course_id] || []).length > 0).map(l => l.id);
+    if (!dsIds.length) return;
+    try {
+      const { error } = await supabase.from('attendance_sessions')
+        .update({ is_locked: lock, locked_by: lock ? session.user.id : null, locked_at: lock ? new Date().toISOString() : null })
+        .in('daily_schedule_id', dsIds);
+      if (error) throw error;
+      for (const id of dsIds) {
+        if (!sessions[id]) sessions[id] = { proof_image_url: null, is_locked: lock };
+        else sessions[id].is_locked = lock;
+      }
+      toast(lock ? 'Day locked' : 'Day unlocked');
+      renderPage();
+    } catch (e) { toast(e.message, 'error'); }
+  }
+
+  // ── Modal ──────────────────────────────────────────────────
+  function openModal(dsId) {
+    activeLectureId = dsId;
+    modalSearch = '';
+    modalSort = { field: 'student_id', dir: 'asc' };
+    pendingFile = null;
+    document.getElementById('attModalBack').classList.add('open');
+    renderModal();
+  }
+
+  function closeModal() {
+    document.getElementById('attModalBack').classList.remove('open');
+    activeLectureId = null;
+  }
+  document.getElementById('mCloseBtn').addEventListener('click', closeModal);
+  document.getElementById('mCloseBtn2').addEventListener('click', closeModal);
+
+  function getFilteredSortedRoster(dsId) {
+    const lecture = lectures.find(l => l.id === dsId);
+    let roster = [...(rosterByCourse[lecture.course_id] || [])];
+    if (modalSearch) {
+      const term = modalSearch.toLowerCase();
+      roster = roster.filter(s => `${s.student_id} ${fullName(s)}`.toLowerCase().includes(term));
+    }
+    roster.sort((a, b) => {
+      const av = modalSort.field === 'name' ? fullName(a) : a.student_id;
+      const bv = modalSort.field === 'name' ? fullName(b) : b.student_id;
+      const cmp = av.localeCompare(bv, undefined, { numeric: true });
+      return modalSort.dir === 'asc' ? cmp : -cmp;
+    });
+    return roster;
+  }
+
+  function renderModal() {
+    const dsId = activeLectureId;
+    const lecture = lectures.find(l => l.id === dsId);
+    const fullRoster = rosterByCourse[lecture.course_id] || [];
+    const { present, absent, notMarked } = summarize(dsId);
+    const sess = sessions[dsId] || {};
+    const locked = !!sess.is_locked;
+
+    document.getElementById('mTitle').textContent = `${courseLabel(lecture.course)} — ${lecture.subject?.subject_name || '—'}`;
+    document.getElementById('mSub').textContent = `${lecture.time_slot?.slot_label || 'Virtual'} · ${lecture.room?.room_code || '—'} · ${lecture.faculty?.full_name || '—'}`;
+    document.getElementById('mLockInfo').innerHTML = locked ? `<span class="lock-pill">🔒 Locked (status only — you can still edit)</span>` : '';
+
+    const body = document.getElementById('mBody');
+
+    if (!fullRoster.length) {
+      body.innerHTML = `<div style="text-align:center; padding:2rem; color:var(--text-muted); font-style:italic;">This course has no students on record yet. Add students first.</div>`;
+      document.getElementById('mSaveBtn').style.display = 'none';
+      return;
+    }
+    document.getElementById('mSaveBtn').style.display = '';
+
+    const roster = getFilteredSortedRoster(dsId);
+    const sortArrow = (field) => modalSort.field === field ? (modalSort.dir === 'asc' ? ' ▲' : ' ▼') : '';
+
+    body.innerHTML = `
+      <div class="roster-toolbar">
+        <div class="roster-summary">
+          <span class="sum-chip"><span class="sum-dot" style="background:var(--text-muted)"></span>${notMarked} Not Marked</span>
+          <span class="sum-chip"><span class="sum-dot" style="background:var(--success)"></span>${present} Present</span>
+          <span class="sum-chip"><span class="sum-dot" style="background:var(--error)"></span>${absent} Absent</span>
+        </div>
+      </div>
+      <div class="roster-search-row">
+        <input type="text" class="roster-search" id="modalSearchInput" placeholder="🔍 Search student name or ID..." value="${modalSearch}" />
+      </div>
+      <table class="roster-table">
+        <thead>
+          <tr>
+            <th class="sortable" data-field="student_id">Student ID${sortArrow('student_id')}</th>
+            <th class="sortable" data-field="name">Name${sortArrow('name')}</th>
+            <th style="width:180px">Status</th>
+          </tr>
+        </thead>
+        <tbody id="rosterBody">
+          ${roster.map(s => rosterRow(dsId, s)).join('') || `<tr><td colspan="3" style="text-align:center; padding:1.5rem; color:var(--text-muted);">No students match your search.</td></tr>`}
+        </tbody>
+      </table>
+
+      <div class="proof-section">
+        <div class="proof-title">Physical Attendance Sheet</div>
+        <div class="proof-row">
+          ${sess.proof_image_url
+            ? `<a href="${sess.proof_image_url}" target="_blank"><img src="${sess.proof_image_url}" class="proof-preview" /></a>`
+            : `<div class="proof-empty">No photo yet</div>`}
+          <div style="display:flex; flex-direction:column; gap:0.5rem;">
+            <input type="file" id="proofFileInput" accept="image/*" style="font-size:0.8rem;" />
+            <button class="btn btn-ghost btn-sm" id="uploadProofBtn">${sess.proof_image_url ? 'Replace Photo' : 'Upload Photo'}</button>
+            <span style="font-size:0.72rem; color:var(--text-muted);">Uploading a photo marks this lecture "complete" once all students are also marked.</span>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('modalSearchInput').addEventListener('input', (e) => {
+      modalSearch = e.target.value;
+      renderModal();
+      // restore focus + cursor position after re-render
+      const inp = document.getElementById('modalSearchInput');
+      inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length);
+    });
+
+    document.querySelectorAll('.roster-table th.sortable').forEach(th => {
+      th.addEventListener('click', () => {
+        const field = th.dataset.field;
+        if (modalSort.field === field) modalSort.dir = modalSort.dir === 'asc' ? 'desc' : 'asc';
+        else modalSort = { field, dir: 'asc' };
+        renderModal();
+      });
+    });
+
+    document.querySelectorAll('.status-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const studentId = btn.dataset.studentId;
+        const current = attendance[dsId][studentId]; // undefined | 'present' | 'absent'
+        attendance[dsId][studentId] = !current ? 'present' : (current === 'present' ? 'absent' : 'present');
+        renderModal();
+      });
+    });
+
+    document.getElementById('uploadProofBtn').addEventListener('click', () => handleUploadProof(dsId));
+  }
+
+  const STATUS_LABEL = { present: 'Present', absent: 'Absent' };
+
+  function rosterRow(dsId, s) {
+    const status = attendance[dsId][s.id]; // undefined = not yet marked
+    const cls = status || 'not_marked';
+    const label = STATUS_LABEL[status] || 'Not Marked';
+    return `
+      <tr>
+        <td style="font-weight:600;">${s.student_id}</td>
+        <td>${fullName(s)}</td>
+        <td>
+          <button class="status-btn sb-${cls}" data-student-id="${s.id}"><span class="sb-dot"></span>${label}</button>
+        </td>
+      </tr>`;
+  }
+
+document.getElementById('mSaveBtn').addEventListener('click', async () => {
+    const dsId = activeLectureId;
+    const lecture = lectures.find(l => l.id === dsId);
+    const roster = rosterByCourse[lecture.course_id] || [];
+    const btn = document.getElementById('mSaveBtn');
+    btn.disabled = true;
+    
+    try {
+      // NEW: Check if an image was selected but not uploaded yet
+      const fileInput = document.getElementById('proofFileInput');
+      if (fileInput && fileInput.files.length > 0) {
+        await handleUploadProof(dsId);
+      }
+
+      // Anyone left unmarked ("Not Marked") defaults to Absent on save
+      const rows = roster.map(s => ({
+        daily_schedule_id: dsId,
+        student_id: s.id,
+        status: attendance[dsId][s.id] || 'absent',
+        marked_by: session.user.id,
+        marked_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }));
+      
+      const { error } = await supabase.from('student_attendance')
+        .upsert(rows, { onConflict: 'daily_schedule_id,student_id' });
+      if (error) throw error;
+
+      for (const s of roster) if (!attendance[dsId][s.id]) attendance[dsId][s.id] = 'absent';
+
+      toast('Attendance saved');
+      renderPage();
+      closeModal();
+    } catch (e) {
+      toast(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+  async function handleUploadProof(dsId) {
+    const fileInput = document.getElementById('proofFileInput');
+    const file = fileInput.files[0];
+    if (!file) { toast('Choose an image file first', 'warn'); return; }
+    if (!file.type.startsWith('image/')) { toast('Please choose an image file', 'warn'); return; }
+    if (file.size > 10 * 1024 * 1024) { toast('Image must be under 10MB', 'warn'); return; }
+
+    const btn = document.getElementById('uploadProofBtn');
+    btn.disabled = true;
+    btn.textContent = 'Uploading...';
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', UPLOAD_PRESET);
+
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+      if (!res.ok) throw new Error('Image upload failed. Check your internet connection and try again.');
+      const data = await res.json();
+      const url = data.secure_url;
+
+      const { error } = await supabase.from('attendance_sessions')
+        .upsert({ daily_schedule_id: dsId, proof_image_url: url, updated_at: new Date().toISOString() }, { onConflict: 'daily_schedule_id' });
+      if (error) throw error;
+
+      if (!sessions[dsId]) sessions[dsId] = { proof_image_url: url, is_locked: false };
+      else sessions[dsId].proof_image_url = url;
+
+      toast('Photo uploaded');
+      renderPage();
+      renderModal();
+    } catch (e) {
+      toast(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = sessions[dsId]?.proof_image_url ? 'Replace Photo' : 'Upload Photo';
+    }
+  }
+
+  await loadCourses();
+</script>
+</body>
+</html>

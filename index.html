@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>B. K. Birla Night College — ASAS Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Design Tokens ───────────────────────────── */
+    :root {
+      --bg:           #f8fafc; /* Unified soft background */      
+      --bg-card:      #ffffff;       
+      --bg-input:     #f1f5f9;       
+      --border:       #cbd5e1;       
+      --border-focus: #1e3a8a;       
+      --accent:       #1e3a8a;       
+      --accent-hover: #1e40af;       
+      --accent-glow:  rgba(30, 58, 138, 0.15);
+      --text-primary: #0f172a;       
+      --text-muted:   #475569;       
+      --text-label:   #64748b;       
+      --error:        #dc2626;       
+      --error-bg:     rgba(220, 38, 38, 0.10);
+      --success:      #10b981;       
+      --college-red:  #b91c1c;       
+      --ff-display:   'DM Serif Display', Georgia, serif;
+      --ff-body:      'DM Sans', system-ui, sans-serif;
+      --radius:       12px;
+    }
+
+    /* ── Reset ─────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      font-family: var(--ff-body);
+      background-color: var(--bg);
+      color: var(--text-primary);
+      overflow: hidden;
+    }
+
+    /* Seamless full-screen layout instead of harsh split */
+    body {
+      display: flex;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    /* Unified Grid spanning the entire screen gracefully */
+    body::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(30, 58, 138, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(30, 58, 138, 0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      /* Smooth diagonal fade - works perfectly on any ultrawide monitor */
+      mask-image: linear-gradient(135deg, black 10%, transparent 100%);
+      -webkit-mask-image: linear-gradient(135deg, black 10%, transparent 100%);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ── Left panel — Branding ─────────────────────────────────── */
+    .brand-panel {
+      flex: 1.15;
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 5vw;
+      background: transparent;
+    }
+
+    .brand-top { position: relative; z-index: 1; }
+
+    /* Polished College Header aligned with Sidebar */
+    .brand-logo-group {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+
+    .college-logo {
+      width: 85px;
+      height: 85px;
+      object-fit: contain;
+      flex-shrink: 0;
+      image-rendering: -webkit-optimize-contrast;
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.2rem;
+    }
+
+    .brand-wordmark {
+      font-family: var(--ff-display);
+      font-weight: 800;
+      font-size: 1.5rem;
+      color: var(--text-primary);
+      line-height: 1.15;
+      letter-spacing: -0.01em;
+    }
+
+    .brand-submark {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      line-height: 1.2;
+    }
+
+    .brand-dept {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-top: 0.3rem;
+    }
+
+    .brand-middle {
+      position: relative;
+      z-index: 1;
+      margin-top: 2rem;
+    }
+
+    .brand-headline {
+      font-family: var(--ff-display);
+      font-size: clamp(2.5rem, 4vw, 3.5rem);
+      line-height: 1.15;
+      color: var(--text-primary);
+      margin-bottom: 1.25rem;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-headline em {
+      font-style: italic;
+      color: var(--college-red);
+    }
+
+    .brand-desc {
+      font-size: 1.1rem;
+      font-weight: 400;
+      color: var(--text-muted);
+      line-height: 1.6;
+      max-width: 38ch;
+    }
+
+    .brand-divider {
+      width: 60px;
+      height: 4px;
+      background: var(--college-red);
+      margin-bottom: 2rem;
+      border-radius: 4px;
+    }
+
+    .brand-bottom {
+      position: relative;
+      z-index: 1;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* ── Right panel — login form ───────────────────────────────── */
+    .login-panel {
+      flex: 0.85;
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 5vw;
+      background: transparent;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 440px;
+      background: var(--bg-card);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      border-radius: 20px;
+      padding: 3.5rem 3rem;
+      /* Soft floating shadow to pop against the grid */
+      box-shadow: 0 25px 50px -12px rgba(30, 58, 138, 0.08), 0 10px 15px -5px rgba(0, 0, 0, 0.03);
+      animation: fadeUp 0.45s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(15px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-header { margin-bottom: 2.5rem; text-align: center; }
+
+    .card-eyebrow {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--college-red);
+      margin-bottom: 1rem;
+      display: inline-block;
+      background: rgba(185, 28, 28, 0.08);
+      padding: 0.4rem 1rem;
+      border-radius: 20px;
+    }
+
+    .card-title {
+      font-family: var(--ff-display);
+      font-size: 2.2rem;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+
+    .card-subtitle {
+      margin-top: 0.5rem;
+      font-size: 1rem;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    /* ── Form elements ─────────────────────────────────────────── */
+    .field { margin-bottom: 1.5rem; }
+
+    .field label {
+      display: block;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .input-wrap { position: relative; }
+
+    .input-icon {
+      position: absolute;
+      left: 1.2rem;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      color: var(--text-label);
+      display: flex;
+    }
+
+    .input-icon svg {
+      width: 18px; height: 18px; stroke: currentColor; fill: none;
+      stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    input[type="email"],
+    input[type="password"],
+    input[type="text"] {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-primary);
+      font-family: var(--ff-body);
+      font-size: 1rem;
+      font-weight: 500;
+      padding: 0.95rem 1rem 0.95rem 3rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+      -webkit-appearance: none;
+    }
+
+    input:focus {
+      background: var(--bg-card);
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    input::placeholder { color: var(--text-label); opacity: 0.7; font-weight: 400; }
+
+    .pw-toggle {
+      position: absolute;
+      right: 1.2rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-label);
+      padding: 0;
+      display: flex;
+      transition: color 0.15s;
+    }
+    .pw-toggle:hover { color: var(--accent); }
+    .pw-toggle svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ── Error banner ──────────────────────────────────────────── */
+    .error-banner {
+      display: none;
+      align-items: center;
+      gap: 0.75rem;
+      background: var(--error-bg);
+      border: 1px solid rgba(220, 38, 38, 0.3);
+      border-radius: var(--radius);
+      padding: 0.85rem 1rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--error);
+      animation: shake 0.35s ease;
+    }
+
+    .error-banner.visible { display: flex; }
+
+    .error-banner svg { width: 18px; height: 18px; flex-shrink: 0; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      25%      { transform: translateX(-5px); }
+      75%      { transform: translateX(5px); }
+    }
+
+    /* ── Submit button ─────────────────────────────────────────── */
+    .btn-login {
+      width: 100%;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius);
+      color: #fff;
+      font-family: var(--ff-body);
+      font-size: 1.05rem;
+      font-weight: 600;
+      padding: 1rem;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .btn-login:hover:not(:disabled) {
+      background: var(--accent-hover);
+      box-shadow: 0 6px 16px rgba(30, 58, 138, 0.25);
+    }
+
+    .btn-login:active:not(:disabled) { transform: translateY(1px); }
+    .btn-login:disabled { opacity: 0.7; cursor: not-allowed; }
+
+    .spinner {
+      display: none;
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+      flex-shrink: 0;
+    }
+    .loading .spinner { display: block; }
+    .loading .btn-text { opacity: 0.8; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Forgot password link ──────────────────────────────────── */
+    .forgot-wrap { text-align: right; margin-top: -0.8rem; margin-bottom: 1.5rem; }
+
+    .link-forgot {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--accent);
+      text-decoration: none;
+      transition: color 0.15s;
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-family: var(--ff-body);
+    }
+    .link-forgot:hover { text-decoration: underline; }
+
+    /* ── Forgot password modal ─────────────────────────────────── */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+      animation: modalIn 0.25s ease both;
+    }
+
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.95) translateY(10px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .modal-title { font-family: var(--ff-display); font-size: 1.8rem; color: var(--text-primary); margin-bottom: 0.5rem; }
+    .modal-desc { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 1.5rem; line-height: 1.5; }
+
+    .modal-actions { display: flex; gap: 1rem; margin-top: 1.5rem; }
+
+    .btn-secondary {
+      flex: 1;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-primary);
+      font-family: var(--ff-body);
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 0.85rem 1rem;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-secondary:hover { background: #e2e8f0; }
+
+    .btn-primary {
+      flex: 2;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius);
+      color: #fff;
+      font-family: var(--ff-body);
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 0.85rem 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .modal-feedback {
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius);
+      display: none;
+      font-weight: 500;
+    }
+    .modal-feedback.success { display: block; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); color: var(--success); }
+    .modal-feedback.error { display: block; background: var(--error-bg); border: 1px solid rgba(220, 38, 38, 0.2); color: var(--error); }
+
+    /* ── Footer ────────────────────────────────────────────────── */
+    .card-footer {
+      margin-top: 2.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* ── Responsive ────────────────────────────────────────────── */
+    @media (max-width: 1024px) {
+      body { flex-direction: column; overflow-y: auto; overflow-x: hidden; }
+      .brand-panel { display: none; } /* Hide branding entirely on mobile to prioritize login */
+      .login-panel { padding: 3rem 1.5rem; align-items: flex-start; }
+      .login-card { max-width: 100%; padding: 2.5rem 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Left: Branding Panel ───────────────────────────────────── -->
+  <aside class="brand-panel">
+    <div class="brand-top">
+      <div class="brand-logo-group">
+        <img src="https://www.bkbnc.edu.in/img/logo.png" alt="B. K. Birla College Logo" class="college-logo" onerror="this.style.display='none'" />
+        <div class="brand-text">
+          <div class="brand-wordmark">B. K. Birla Night College, Kalyan</div>
+          <div class="brand-submark">(Affiliated to University of Mumbai)</div>
+          <div class="brand-dept">Department of Commerce & Management</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="brand-middle">
+      <div class="brand-divider"></div>
+      <h1 class="brand-headline">
+        Academic<br />Schedule<br /><em>Attendance</em><br />System
+      </h1>
+      <p class="brand-desc">
+        Centralised timetable management, lectures scheduling, and daily students attendance tracking for our institution.
+      </p>
+    </div>
+
+    <div class="brand-bottom">
+      &copy; <span id="yr"></span> ASAS &mdash; All rights reserved
+    </div>
+  </aside>
+
+  <!-- ── Right: Login Panel ─────────────────────────────────────── -->
+  <main class="login-panel">
+    <div class="login-card">
+
+      <div class="card-header">
+        <div class="card-eyebrow">Staff & Faculty Portal</div>
+        <h2 class="card-title">Welcome back</h2>
+        <p class="card-subtitle">Sign in with your institutional credentials</p>
+      </div>
+
+      <!-- Error banner -->
+      <div class="error-banner" id="errorBanner" role="alert">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="errorMsg">Invalid credentials. Please try again.</span>
+      </div>
+
+      <form id="loginForm" novalidate>
+        <!-- Email -->
+        <div class="field">
+          <label for="email">Email address</label>
+          <div class="input-wrap">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,14 22,4"/></svg>
+            </span>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              placeholder="you@bkbirlacollegekalyan.com"
+              autocomplete="email"
+              required
+            />
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="input-wrap">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </span>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              placeholder="Enter your password"
+              autocomplete="current-password"
+              required
+            />
+            <button type="button" class="pw-toggle" id="pwToggle" aria-label="Toggle password visibility">
+              <svg id="eyeShow" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg id="eyeHide" viewBox="0 0 24 24" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Forgot password link -->
+        <div class="forgot-wrap">
+          <button type="button" class="link-forgot" id="openForgot">
+            Forgot your password?
+          </button>
+        </div>
+
+        <!-- Submit -->
+        <button type="submit" class="btn-login" id="loginBtn">
+          <div class="spinner"></div>
+          <span class="btn-text">Sign in to ASAS</span>
+        </button>
+      </form>
+
+      <div class="card-footer">
+        Access is restricted to authorised staff only.<br />
+        Contact your system administrator if you need assistance.
+      </div>
+    </div>
+  </main>
+
+  <!-- ── Forgot Password Modal ──────────────────────────────────── -->
+  <div class="modal-backdrop" id="forgotModal" role="dialog" aria-modal="true" aria-labelledby="forgotTitle">
+    <div class="modal">
+      <h3 class="modal-title" id="forgotTitle">Reset Password</h3>
+      <p class="modal-desc">
+        Enter your registered email address and we'll send you a link to reset your password.
+      </p>
+
+      <div class="field">
+        <label for="resetEmail">Email address</label>
+        <div class="input-wrap">
+          <span class="input-icon">
+            <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,14 22,4"/></svg>
+          </span>
+          <input
+            type="email"
+            id="resetEmail"
+            placeholder="your@email.com"
+            autocomplete="email"
+          />
+        </div>
+      </div>
+
+      <div class="modal-feedback" id="resetFeedback"></div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="closeForgot">Cancel</button>
+        <button type="button" class="btn-primary"   id="sendReset">
+          <div class="spinner" id="resetSpinner" style="display:none"></div>
+          <span id="resetBtnText">Send Reset Link</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Scripts ────────────────────────────────────────────────── -->
+  <script type="module">
+    import { supabase }       from './js/config/supabase.js';
+    import { getSession, redirectByRole } from './js/auth/session.js';
+
+    document.getElementById('yr').textContent = new Date().getFullYear();
+
+    (async () => {
+      const session = await getSession();
+      if (session) redirectByRole(session.role);
+    })();
+
+    const form        = document.getElementById('loginForm');
+    const emailInput  = document.getElementById('email');
+    const pwInput     = document.getElementById('password');
+    const loginBtn    = document.getElementById('loginBtn');
+    const errorBanner = document.getElementById('errorBanner');
+    const errorMsg    = document.getElementById('errorMsg');
+    const pwToggle    = document.getElementById('pwToggle');
+    const eyeShow     = document.getElementById('eyeShow');
+    const eyeHide     = document.getElementById('eyeHide');
+
+    const forgotModal  = document.getElementById('forgotModal');
+    const openForgot   = document.getElementById('openForgot');
+    const closeForgot  = document.getElementById('closeForgot');
+    const resetEmailEl = document.getElementById('resetEmail');
+    const sendReset    = document.getElementById('sendReset');
+    const resetFeedback= document.getElementById('resetFeedback');
+    const resetSpinner = document.getElementById('resetSpinner');
+    const resetBtnText = document.getElementById('resetBtnText');
+
+    function showError(msg) {
+      errorMsg.textContent = msg;
+      errorBanner.classList.add('visible');
+    }
+
+    function hideError() {
+      errorBanner.classList.remove('visible');
+    }
+
+    function setLoading(loading) {
+      loginBtn.disabled = loading;
+      loginBtn.classList.toggle('loading', loading);
+    }
+
+    pwToggle.addEventListener('click', () => {
+      const isHidden = pwInput.type === 'password';
+      pwInput.type   = isHidden ? 'text' : 'password';
+      eyeShow.style.display = isHidden ? 'none'  : 'block';
+      eyeHide.style.display = isHidden ? 'block' : 'none';
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideError();
+
+      const email    = emailInput.value.trim();
+      const password = pwInput.value;
+
+      if (!email || !password) {
+        showError('Please enter your email address and password.');
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+        if (error) {
+          if (error.message.includes('Invalid login credentials') ||
+              error.message.includes('invalid_grant')) {
+            showError('Incorrect email or password. Please try again.');
+          } else if (error.message.includes('Email not confirmed')) {
+            showError('Your email address has not been confirmed. Contact your administrator.');
+          } else {
+            showError(error.message);
+          }
+          setLoading(false);
+          return;
+        }
+
+        const session = await getSession();
+
+        if (!session) {
+          showError('Account profile not found or inactive. Contact your administrator.');
+          await supabase.auth.signOut();
+          setLoading(false);
+          return;
+        }
+
+        redirectByRole(session.role);
+
+      } catch (err) {
+        console.error('[ASAS] Login error:', err);
+        showError('An unexpected error occurred. Please try again.');
+        setLoading(false);
+      }
+    });
+
+    emailInput.addEventListener('input', hideError);
+    pwInput.addEventListener('input', hideError);
+
+    openForgot.addEventListener('click', () => {
+      resetFeedback.className = 'modal-feedback';
+      resetFeedback.textContent = '';
+      resetEmailEl.value = emailInput.value.trim(); 
+      forgotModal.classList.add('open');
+      resetEmailEl.focus();
+    });
+
+    closeForgot.addEventListener('click', closeModal);
+
+    forgotModal.addEventListener('click', (e) => {
+      if (e.target === forgotModal) closeModal();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && forgotModal.classList.contains('open')) closeModal();
+    });
+
+    function closeModal() {
+      forgotModal.classList.remove('open');
+    }
+
+    sendReset.addEventListener('click', async () => {
+      const email = resetEmailEl.value.trim();
+
+      if (!email) {
+        showResetFeedback('Please enter your email address.', 'error');
+        return;
+      }
+
+      sendReset.disabled = true;
+      resetSpinner.style.display = 'block';
+      resetBtnText.textContent = 'Sending…';
+      resetFeedback.className = 'modal-feedback';
+
+      try {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/index.html`,
+        });
+
+        if (error) {
+          showResetFeedback(error.message, 'error');
+        } else {
+          showResetFeedback(
+            'Reset link sent! Check your inbox (and spam folder) for the email.',
+            'success'
+          );
+          sendReset.disabled = true; 
+          resetBtnText.textContent = 'Sent';
+        }
+      } catch (err) {
+        showResetFeedback('Failed to send reset email. Please try again.', 'error');
+      } finally {
+        resetSpinner.style.display = 'none';
+        if (resetBtnText.textContent === 'Sending…') {
+          sendReset.disabled = false;
+          resetBtnText.textContent = 'Send Reset Link';
+        }
+      }
+    });
+
+    function showResetFeedback(msg, type) {
+      resetFeedback.textContent = msg;
+      resetFeedback.className   = `modal-feedback ${type}`;
+    }
+  </script>
+</body>
+</html>

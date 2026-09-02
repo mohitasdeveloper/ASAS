@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ASAS — Dashboard</title>
+  
+  <link rel="stylesheet" href="/css/theme.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+  
+  <style>
+    /* ── Dashboard Specific Styles ───────────────────────────────── */
+    .dashboard-top {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;
+    }
+    
+    .date-display { display: flex; flex-direction: column; gap: 0.5rem; }
+    .date-title { font-family: var(--ff-display); font-size: 2rem; font-weight: 700; color: var(--text-primary); line-height: 1.1; }
+    .date-badge { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem; background: rgba(79, 106, 245, 0.1); color: var(--accent); border-radius: 20px; font-size: 0.75rem; font-weight: 600; width: fit-content; }
+    .date-badge svg { width: 14px; height: 14px; }
+
+    /* Date Picker Input */
+    .date-picker-wrapper { position: relative; display: flex; align-items: center; }
+    .date-picker-input {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+      padding: 0.65rem 1rem 0.65rem 2.6rem !important;
+      font-family: var(--ff-body); font-weight: 600;
+      color: var(--text-primary); font-size: 0.9rem; cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: border-color 0.2s;
+      width: 150px !important;
+      outline: none;
+    }
+    .date-picker-input:focus, .date-picker-input:hover { border-color: var(--accent); }
+    .date-picker-icon { 
+      position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); 
+      display: flex; align-items: center; justify-content: center; 
+      color: var(--text-muted); pointer-events: none; z-index: 10; 
+    }
+    .date-picker-icon svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* Stat Cards */
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.25rem; margin-bottom: 2rem;
+    }
+    .stat-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.02); position: relative; overflow: hidden;
+    }
+    .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; }
+    .stat-card.blue::before { background: var(--accent); }
+    .stat-card.green::before { background: var(--success); }
+    .stat-card.gray::before { background: #94a3b8; } 
+    .stat-card.yellow::before { background: #eab308; }
+    .stat-card.red::before { background: var(--error); }
+    
+    .stat-label { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+    .stat-value { font-family: var(--ff-display); font-size: 2.5rem; font-weight: 400; color: var(--text-primary); line-height: 1; margin: 0.25rem 0; }
+    .stat-desc { font-size: 0.75rem; color: var(--text-muted); }
+
+    /* Quick Links */
+    .quick-links {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem; margin-bottom: 2rem;
+    }
+    .quick-link {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 1rem 1.25rem; display: flex; align-items: center; gap: 1rem;
+      text-decoration: none; color: var(--text-primary); transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    }
+    .quick-link:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.05); }
+    .quick-icon { width: 36px; height: 36px; border-radius: 8px; background: rgba(79, 106, 245, 0.08); color: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .quick-icon svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .quick-text { display: flex; flex-direction: column; }
+    .quick-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.15rem; }
+    .quick-desc { font-size: 0.75rem; color: var(--text-muted); }
+
+    /* Lists Section */
+    .lists-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem;
+    }
+    @media (max-width: 768px) { .lists-grid { grid-template-columns: 1fr; } }
+    
+    .list-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.02); display: flex; flex-direction: column; min-height: 300px;
+    }
+    .list-header {
+      padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .list-title { font-weight: 700; font-size: 1rem; color: var(--text-primary); }
+    .list-link { font-size: 0.8rem; color: var(--accent); text-decoration: none; font-weight: 500; }
+    .list-link:hover { text-decoration: underline; }
+    
+    .list-body { padding: 0; margin: 0; list-style: none; flex: 1; overflow-y: auto; max-height: 400px; }
+    .list-item {
+      padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;
+    }
+    .list-item:last-child { border-bottom: none; }
+    .list-empty { padding: 3rem 1.5rem; text-align: center; color: var(--text-muted); font-size: 0.9rem; }
+    
+    .item-content { display: flex; flex-direction: column; gap: 0.25rem; }
+    .item-title { font-weight: 600; font-size: 0.9rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem; }
+    .item-subtitle { font-size: 0.8rem; color: var(--text-muted); }
+    .item-meta { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; }
+
+    /* Status Dots */
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+    .dot-present { background: var(--success); }
+    .dot-late { background: #f59e0b; }
+    .dot-absent { background: var(--error); }
+    .dot-not_marked { background: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-college" id="sidebarCollege"></div>
+  <nav id="sideNav"></nav>
+  <div class="sidebar-footer">
+    <div class="theme-row">
+      <span class="theme-label"><span id="themeIcon"><svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span><span id="themeLabel">Light mode</span></span>
+      <label class="toggle-switch"><input type="checkbox" id="themeToggle"/><span class="toggle-track"></span></label>
+    </div>
+    <div class="user-pill">
+      <div class="user-avatar" id="userAvatar">?</div>
+      <div class="user-info"><div class="user-name" id="userName">…</div><div class="user-role" id="userRole">admin</div></div>
+      <button class="btn-logout" id="logoutBtn" title="Sign out"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div>
+      <h1 class="page-title">Dashboard</h1>
+      <p class="page-subtitle">Academic Schedule Execution System — Admin Overview</p>
+    </div>
+  </div>
+  
+  <div class="content">
+    
+    <div class="dashboard-top">
+      <div class="date-display">
+        <div class="date-title" id="displayDate">Loading...</div>
+        <div class="date-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span id="displayDayType">...</span>
+        </div>
+      </div>
+      <div class="date-picker-wrapper">
+        <span class="date-picker-icon">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </span>
+        <input type="text" id="dashDatePicker" class="date-picker-input" placeholder="Select Date" readonly />
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card blue">
+        <div class="stat-label">Scheduled Today</div>
+        <div class="stat-value" id="statSched">-</div>
+        <div class="stat-desc">lecture slots</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">Attendance Taken</div>
+        <div class="stat-value" id="statMarked">-</div>
+        <div class="stat-desc">lectures</div>
+      </div>
+      <div class="stat-card gray">
+        <div class="stat-label">Pending</div>
+        <div class="stat-value" id="statUnmarked">-</div>
+        <div class="stat-desc">lectures not yet taken</div>
+      </div>
+      <div class="stat-card yellow">
+        <div class="stat-label">Absent Faculty</div>
+        <div class="stat-value" id="statAbsent">-</div>
+        <div class="stat-desc">today</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-label">Students Absent</div>
+        <div class="stat-value" id="statNotEngaged">-</div>
+        <div class="stat-desc">today</div>
+      </div>
+    </div>
+
+    <div class="quick-links">
+      <a href="/pages/leaves.html" class="quick-link">
+        <div class="quick-icon"><svg><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></div>
+        <div class="quick-text"><span class="quick-title">Leave Management</span><span class="quick-desc">Record absences & leaves</span></div>
+      </a>
+      <a href="/pages/daily-scheduler.html" class="quick-link">
+        <div class="quick-icon"><svg><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <div class="quick-text"><span class="quick-title">Daily Scheduler</span><span class="quick-desc">Generate today's schedule</span></div>
+      </a>
+      <a href="/pages/attendance.html" class="quick-link">
+        <div class="quick-icon"><svg><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+        <div class="quick-text"><span class="quick-title">Attendance</span><span class="quick-desc">Mark student attendance</span></div>
+      </a>
+      <a href="/pages/reports.html" class="quick-link">
+        <div class="quick-icon"><svg><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+        <div class="quick-text"><span class="quick-title">Reports</span><span class="quick-desc">View & export all reports</span></div>
+      </a>
+    </div>
+
+    <div class="lists-grid">
+      
+      <div class="list-card">
+        <div class="list-header">
+          <div class="list-title">Leave Entries (Selected Date)</div>
+          <a href="/pages/leaves.html" class="list-link">View all &rarr;</a>
+        </div>
+        <ul class="list-body" id="leavesList">
+          <div class="list-empty"><span class="spin"></span> Loading...</div>
+        </ul>
+      </div>
+
+      <div class="list-card">
+        <div class="list-header">
+          <div class="list-title">Attendance Updates (Selected Date)</div>
+          <a href="/pages/attendance.html" class="list-link">View all &rarr;</a>
+        </div>
+        <ul class="list-body" id="execList">
+          <div class="list-empty"><span class="spin"></span> Loading...</div>
+        </ul>
+      </div>
+
+    </div>
+
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<script type="module">
+  import { requireRole } from '/js/auth/session.js';
+  import { initSidebar } from '/js/components/sidebar.js';
+  import { supabase } from '/js/config/supabase.js';
+
+  const session = await requireRole('admin'); 
+  initSidebar(session, 'dashboard');
+
+  const STATUS_LABELS = { present: 'Present', absent: 'Absent', late: 'Late', not_marked: 'Not Marked' };
+
+  // Helper: Format large dates elegantly
+  function formatDisplayDate(dateStr) {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  }
+
+  // Helper: Time ago formatter
+  function timeAgo(dateString) {
+    const d = new Date(dateString);
+    const now = new Date();
+    const diff = (now - d) / 1000;
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+    return Math.floor(diff/86400) + 'd ago';
+  }
+
+  // Initialize Flatpickr for dynamic date changing
+  flatpickr('#dashDatePicker', {
+    defaultDate: 'today',
+    dateFormat: 'Y-m-d',
+    disableMobile: true,
+    onChange: function(selectedDates, dateStr) {
+      loadDashboard(dateStr);
+    }
+  });
+
+  // Load the initial dashboard for today immediately
+  const todayStr = new Date().toLocaleDateString('en-CA'); // 'YYYY-MM-DD' local time
+  loadDashboard(todayStr);
+
+  async function loadDashboard(dateStr) {
+    // 1. Update Headers
+    document.getElementById('displayDate').textContent = formatDisplayDate(dateStr);
+    const dayOfWeek = new Date(dateStr).getDay();
+    document.getElementById('displayDayType').textContent = (dayOfWeek === 0) ? 'Sunday' : (dayOfWeek === 6 ? 'Saturday' : 'Weekday');
+
+    try {
+      // 2. Fetch Total Scheduled (excluding cancelled)
+      const { data: schedRows, error: sErr } = await supabase.from('daily_schedule')
+        .select('id')
+        .eq('schedule_date', dateStr)
+        .eq('is_cancelled', false);
+
+      if (sErr) throw sErr;
+      const schedIds = (schedRows || []).map(r => r.id);
+
+      // 3. Fetch student attendance recorded against today's lectures
+      let attendance = [];
+      if (schedIds.length) {
+        const { data: attRows, error: aErr } = await supabase.from('student_attendance')
+          .select('status, daily_schedule_id')
+          .in('daily_schedule_id', schedIds);
+        if (aErr) throw aErr;
+        attendance = attRows || [];
+      }
+
+      // 4. Fetch Approved Leaves for this date
+      const { count: leaveCount, error: lErr } = await supabase.from('faculty_leaves')
+        .select('*', { count: 'exact', head: true })
+        .eq('leave_date', dateStr)
+        .eq('status', 'approved');
+        
+      if (lErr) throw lErr;
+
+      // --- CALCULATE PERFECT MATH ---
+      const scheduled = schedIds.length;
+
+      // A lecture counts as "attendance taken" once any student row on it isn't 'not_marked'
+      const markedLectureIds = new Set(attendance.filter(a => a.status !== 'not_marked').map(a => a.daily_schedule_id));
+      const marked = markedLectureIds.size;
+      const studentsAbsent = attendance.filter(a => a.status === 'absent').length;
+
+      // Pending is simply Total Scheduled minus lectures with attendance taken. Ensure it doesn't drop below 0.
+      const unmarked = Math.max(0, scheduled - marked); 
+
+      // Update DOM Cards
+      animateValue('statSched', scheduled);
+      animateValue('statMarked', marked);
+      animateValue('statUnmarked', unmarked);
+      animateValue('statAbsent', leaveCount || 0);
+      animateValue('statNotEngaged', studentsAbsent);
+
+      // 5. Load Lists
+      loadLeavesList(dateStr);
+      loadExecutionList(dateStr, schedIds);
+
+    } catch (err) {
+      console.error("Dashboard error:", err);
+    }
+  }
+
+  async function loadLeavesList(dateStr) {
+    const listEl = document.getElementById('leavesList');
+    listEl.innerHTML = '<div class="list-empty"><span class="spin"></span> Loading...</div>';
+
+    try {
+      const { data, error } = await supabase.from('faculty_leaves')
+        .select('created_at, leave_type, faculty:faculty_id(full_name)')
+        .eq('leave_date', dateStr)
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false })
+        .limit(6);
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        listEl.innerHTML = `<div class="list-empty">No approved leaves for this date.</div>`;
+        return;
+      }
+
+      listEl.innerHTML = data.map(l => `
+        <li class="list-item">
+          <div class="item-content">
+            <div class="item-title">Prof. ${l.faculty?.full_name || 'Unknown'}</div>
+            <div class="item-subtitle">${(l.leave_type || 'Leave').toUpperCase()}</div>
+          </div>
+          <div class="item-meta">${timeAgo(l.created_at)}</div>
+        </li>
+      `).join('');
+    } catch(e) {
+      listEl.innerHTML = `<div class="list-empty">Error loading leaves.</div>`;
+    }
+  }
+
+  async function loadExecutionList(dateStr, schedIds) {
+    const listEl = document.getElementById('execList');
+    listEl.innerHTML = '<div class="list-empty"><span class="spin"></span> Loading...</div>';
+
+    if (!schedIds || !schedIds.length) {
+      listEl.innerHTML = `<div class="list-empty">No lectures scheduled for this date.</div>`;
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.from('student_attendance')
+        .select(`
+          status, updated_at, daily_schedule_id,
+          daily_schedule:daily_schedule_id(
+            course:course_id(year, program, division),
+            subject:subject_id(subject_name)
+          )
+        `)
+        .in('daily_schedule_id', schedIds)
+        .neq('status', 'not_marked')
+        .order('updated_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        listEl.innerHTML = `<div class="list-empty">No attendance recorded yet for this date.</div>`;
+        return;
+      }
+
+      // Group per-student rows into one summary per lecture (most recently updated first)
+      const byLecture = new Map();
+      for (const row of data) {
+        const key = row.daily_schedule_id;
+        if (!byLecture.has(key)) {
+          const ds = row.daily_schedule || {};
+          const c = ds.course || {};
+          const courseLbl = c.division ? `${c.year} ${c.program} ${c.division}` : `${c.year || ''} ${c.program || ''}`.trim();
+          byLecture.set(key, {
+            courseLbl, subject: ds.subject?.subject_name || 'Unknown Subject',
+            present: 0, absent: 0, late: 0, lastUpdated: row.updated_at
+          });
+        }
+        const entry = byLecture.get(key);
+        if (row.status === 'present') entry.present++;
+        else if (row.status === 'absent') entry.absent++;
+        else if (row.status === 'late') entry.late++;
+        if (new Date(row.updated_at) > new Date(entry.lastUpdated)) entry.lastUpdated = row.updated_at;
+      }
+
+      const lectures = Array.from(byLecture.values())
+        .sort((a, b) => new Date(b.lastUpdated) - new Date(a.lastUpdated))
+        .slice(0, 6);
+
+      listEl.innerHTML = lectures.map(l => `
+          <li class="list-item">
+            <div class="item-content">
+              <div class="item-title">
+                <span class="dot dot-present"></span>
+                ${l.courseLbl} &mdash; ${l.subject}
+              </div>
+              <div class="item-subtitle">${l.present} Present &middot; ${l.absent} Absent${l.late ? ` &middot; ${l.late} Late` : ''}</div>
+            </div>
+            <div class="item-meta">${timeAgo(l.lastUpdated)}</div>
+          </li>
+        `).join('');
+    } catch(e) {
+      listEl.innerHTML = `<div class="list-empty">Error loading attendance.</div>`;
+      console.error(e);
+    }
+  }
+
+  // Smooth number counter animation
+  function animateValue(id, end) {
+    const obj = document.getElementById(id);
+    if (!obj) return;
+    const start = parseInt(obj.textContent) || 0;
+    if (start === end) { obj.textContent = end; return; }
+    
+    const duration = 500;
+    let startTimestamp = null;
+    const step = (timestamp) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      obj.textContent = Math.floor(progress * (end - start) + start);
+      if (progress < 1) window.requestAnimationFrame(step);
+    };
+    window.requestAnimationFrame(step);
+  }
+</script>
+
+</body>
+</html>

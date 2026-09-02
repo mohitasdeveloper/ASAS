@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>ASAS — Holiday Management</title>
+  <link rel="stylesheet" href="/css/theme.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"/>
+  <style>
+    .holiday-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:.75rem;margin-top:1rem}
+    .holiday-card{background:var(--bg-input);border:1px solid var(--border);border-radius:10px;
+      padding:.9rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:.75rem;
+      transition:background .25s,border-color .25s}
+    .holiday-card:hover{border-color:var(--error)}
+    .holiday-info{}
+    .holiday-date{font-weight:700;font-size:.88rem;color:var(--text-primary)}
+    .holiday-name{font-size:.78rem;color:var(--text-muted);margin-top:.1rem}
+    .holiday-day{font-size:.7rem;color:var(--accent);font-weight:600;margin-top:.1rem}
+    .modal-back{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);z-index:200;align-items:center;justify-content:center}
+    .modal-back.open{display:flex}
+    .modal{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:2rem;width:100%;max-width:380px;box-shadow:var(--shadow-modal);animation:mIn .22s ease both}
+    @keyframes mIn{from{opacity:0;transform:scale(.93)}to{opacity:1;transform:scale(1)}}
+    .modal-title{font-family:var(--ff-display);font-size:1.3rem;margin-bottom:.5rem}
+    .modal-body-text{font-size:.88rem;color:var(--text-muted);margin-bottom:1.5rem;line-height:1.6}
+    .modal-actions{display:flex;gap:.75rem;justify-content:flex-end}
+    @media(max-width:768px){.sidebar{display:none}.content{padding:1rem}.topbar{padding:1rem}}
+  </style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-college" id="sidebarCollege"></div>
+  <nav id="sideNav"></nav>
+  <div class="sidebar-footer">
+    <div class="theme-row">
+      <span class="theme-label"><span id="themeIcon"><svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span><span id="themeLabel">Light mode</span></span>
+      <label class="toggle-switch"><input type="checkbox" id="themeToggle"/><span class="toggle-track"></span></label>
+    </div>
+    <div class="user-pill">
+      <div class="user-avatar" id="userAvatar">?</div>
+      <div class="user-info"><div class="user-name" id="userName">…</div><div class="user-role" id="userRole">admin</div></div>
+      <button class="btn-logout" id="logoutBtn"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div><h1 class="page-title">Holiday Management</h1><p class="page-subtitle">Declare holidays — no schedule, leave or reports calculated on these days</p></div>
+  </div>
+  <div class="content">
+
+    <!-- Declare holiday form -->
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Declare Holiday
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Date <span style="color:var(--error)">*</span></label>
+          <input type="text" id="holidayDate" placeholder="Pick a date" readonly/>
+        </div>
+        <div class="field" style="flex:2">
+          <label>Holiday Name <span style="color:var(--error)">*</span></label>
+          <input type="text" id="holidayName" placeholder="e.g. Diwali, Republic Day, Exam…"/>
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <button class="btn btn-primary" id="declareBtn">
+            <svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Declare Holiday
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Holiday list -->
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Declared Holidays
+        <span id="holidayCount" style="font-size:.75rem;font-weight:400;color:var(--text-muted);margin-left:.5rem"></span>
+      </div>
+      <div id="holidayList">
+        <div style="color:var(--text-muted);font-size:.84rem;padding:.5rem 0"><span class="spin" style="display:inline-block"></span> Loading…</div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- Delete confirm modal -->
+<div class="modal-back" id="deleteModal">
+  <div class="modal">
+    <div class="modal-title">Remove Holiday?</div>
+    <div class="modal-body-text" id="deleteModalBody"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" id="deleteCancelBtn">Cancel</button>
+      <button class="btn btn-danger btn-sm" id="deleteConfirmBtn">Remove</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script type="module">
+import { requireRole } from '/js/auth/session.js';
+import { initSidebar } from '/js/components/sidebar.js';
+import { supabase } from '/js/config/supabase.js';
+
+const session = await requireRole('admin');
+initSidebar(session, 'holidays');
+
+function toast(msg, type='success') {
+  const c=document.getElementById('toast');
+  const el=document.createElement('div');el.className=`toast-item ${type}`;el.textContent=msg;
+  c.appendChild(el);setTimeout(()=>el.remove(),4000);
+}
+
+const DAY_NAMES=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+function fmtDate(d) {
+  if(!d)return'—';
+  return new Date(d+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+}
+function dayName(d) {
+  return DAY_NAMES[new Date(d+'T00:00:00').getDay()];
+}
+
+flatpickr('#holidayDate',{dateFormat:'Y-m-d',disableMobile:true});
+
+// ── Load holidays ─────────────────────────────────────────────────
+async function loadHolidays() {
+  const el=document.getElementById('holidayList');
+  try {
+    const{data,error}=await supabase.from('holidays')
+      .select('id,holiday_date,name,declared_by_admin:admin_users!declared_by(full_name)')
+      .order('holiday_date',{ascending:true});
+    if(error)throw error;
+    document.getElementById('holidayCount').textContent=`(${data?.length??0})`;
+    if(!data?.length){
+      el.innerHTML='<div style="color:var(--text-muted);font-size:.84rem;padding:1rem 0">No holidays declared yet.</div>';
+      return;
+    }
+    el.innerHTML=`<div class="holiday-grid">${data.map(h=>`
+      <div class="holiday-card">
+        <div class="holiday-info">
+          <div class="holiday-date">${fmtDate(h.holiday_date)}</div>
+          <div class="holiday-day">${dayName(h.holiday_date)}</div>
+          <div class="holiday-name">${h.name}</div>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="openDelete('${h.id}','${h.name}','${h.holiday_date}')">
+          <svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+          Remove
+        </button>
+      </div>`).join('')}</div>`;
+  }catch(e){toast(e.message,'error');}
+}
+
+// ── Declare holiday ───────────────────────────────────────────────
+document.getElementById('declareBtn').addEventListener('click',async()=>{
+  const date=document.getElementById('holidayDate').value;
+  const name=document.getElementById('holidayName').value.trim();
+  if(!date||!name){toast('Date and name are required.','error');return;}
+  const btn=document.getElementById('declareBtn');btn.disabled=true;
+  try{
+    const{error}=await supabase.from('holidays').insert({
+      holiday_date:date,name,declared_by:session.user.id
+    });
+    if(error){
+      if(error.code==='23505')toast(`${fmtDate(date)} is already declared as a holiday.`,'warn');
+      else throw error;
+      return;
+    }
+    toast(`${name} (${fmtDate(date)}) declared as holiday.`,'success');
+    document.getElementById('holidayDate').value='';
+    document.getElementById('holidayName').value='';
+    loadHolidays();
+  }catch(e){toast(e.message,'error');}
+  finally{btn.disabled=false;}
+});
+
+// ── Delete modal ──────────────────────────────────────────────────
+let pendingId=null;
+window.openDelete=(id,name,date)=>{
+  pendingId=id;
+  document.getElementById('deleteModalBody').textContent=
+    `Remove "${name}" (${fmtDate(date)}) from holidays? This cannot be undone.`;
+  document.getElementById('deleteModal').classList.add('open');
+};
+document.getElementById('deleteCancelBtn').addEventListener('click',()=>{
+  document.getElementById('deleteModal').classList.remove('open');pendingId=null;
+});
+document.getElementById('deleteConfirmBtn').addEventListener('click',async()=>{
+  if(!pendingId)return;
+  const btn=document.getElementById('deleteConfirmBtn');btn.disabled=true;
+  try{
+    const{error}=await supabase.from('holidays').delete().eq('id',pendingId);
+    if(error)throw error;
+    toast('Holiday removed.','success');
+    document.getElementById('deleteModal').classList.remove('open');pendingId=null;
+    loadHolidays();
+  }catch(e){toast(e.message,'error');}
+  finally{btn.disabled=false;}
+});
+
+loadHolidays();
+</script>
+</body>
+</html>

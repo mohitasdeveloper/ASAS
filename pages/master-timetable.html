@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>ASAS — Master Timetable</title>
+  
+  <link rel="stylesheet" href="/css/theme.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css"/>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+  <style>
+    /* Prevent Tom Select from wrapping text to the next line */
+    .ts-wrapper.single .ts-control { display: flex !important; flex-wrap: nowrap !important; align-items: center; overflow: hidden !important; }
+    .ts-wrapper.single .ts-control .item { white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; max-width: 95% !important; pointer-events: none; }
+    .ts-wrapper.single .ts-control input { min-width: 0 !important; }
+
+    /* Controls & Toggles */
+    .topbar-controls { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between; margin-top: 0.5rem; }
+    .day-toggle{display:flex;gap:.5rem;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:.3rem; transition: background .25s, border-color .25s;}
+    .day-btn{flex:1;padding:.55rem 1.25rem;border:none;border-radius:8px;font-family:var(--ff-body);font-size:.88rem;font-weight:500;cursor:pointer;background:transparent;color:var(--text-muted);transition:background .2s,color .2s}
+    .day-btn.active{background:var(--accent);color:#fff}
+    
+    .btn-export { display: flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-primary); font-size: 0.85rem; cursor: pointer; transition: background 0.2s; font-weight: 500; }
+    .btn-export:hover { background: var(--bg-hover); }
+    .btn-export svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+    /* Grid container */
+    .grid-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;overflow:hidden;min-width:700px; transition: background .25s, border-color .25s; margin-top: 1rem; margin-bottom: 2rem;}
+    .grid-header{display:grid;border-bottom:1px solid var(--border);background:rgba(127,127,200,.04); transition: border-color .25s;}
+    .gh-cell{padding:.6rem .75rem;font-size:.67rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);border-right:1px solid var(--border); transition: border-color .25s;}
+    .gh-cell:last-child{border-right:none}
+    
+    .slot-row{display:grid;border-bottom:1px solid rgba(37,41,53,.5)}
+    [data-theme="light"] .slot-row { border-bottom-color: rgba(200,210,230,.4); }
+    .slot-row:last-child{border-bottom:none}
+    .slot-row.is-break{background:rgba(127,127,200,.03)}
+    
+    .slot-time{padding:.5rem .65rem;font-size:.7rem;color:var(--text-muted);border-right:1px solid var(--border);display:flex;flex-direction:column;justify-content:center;min-width:88px; transition: border-color .25s;}
+    .slot-time .tl{font-weight:600;font-size:.72rem;color:var(--text-label)}
+    .slot-time .tr{font-size:.65rem}
+    .break-label{padding:.4rem .65rem;font-size:.72rem;font-style:italic;color:var(--text-muted);display:flex;align-items:center; justify-content:center; font-weight: 500;}
+    
+    /* Lecture cell */
+    .cell{padding:.45rem .5rem;border-right:1px solid var(--border);min-height:62px;cursor:pointer;position:relative;transition:background .15s, border-color .25s;}
+    .cell:last-child{border-right:none}
+    .cell:hover{background:var(--bg-hover)}
+    .cell.filled{background:rgba(79,106,245,.06)}
+    .cell.filled:hover{background:rgba(79,106,245,.12)}
+    
+    .cell-course{font-size:.65rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted)}
+    .cell-subject{font-size:.78rem;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; transition: color .25s;}
+    .cell-faculty{font-size:.7rem;color:var(--text-muted)}
+    .cell-add{display:flex;align-items:center;justify-content:center;height:100%;color:var(--border);transition:color .15s;font-size: 0.8rem; font-weight: 600;}
+    .cell:hover .cell-add{color:var(--accent)}
+    .cell-add svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round; margin-right: 4px;}
+    
+    /* Placeholder */
+    .grid-placeholder{padding:4rem;text-align:center;color:var(--text-muted);display:flex;flex-direction:column;align-items:center;gap:1rem}
+    .grid-placeholder svg{width:36px;height:36px;stroke:var(--border);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+
+    /* --- NEW: Virtual Flexible Load Section --- */
+    .virtual-section {
+        background: var(--bg-card); border-radius: 12px; border: 1px dashed var(--accent);
+        padding: 1.5rem; margin-bottom: 2rem;
+    }
+    .virtual-header {
+        display: flex; justify-content: space-between; align-items: center; 
+        margin-bottom: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: 0.75rem;
+    }
+    .virtual-header h3 { margin: 0; color: var(--accent); display: flex; align-items: center; gap: 0.5rem; font-size: 1.1rem; }
+    
+    /* Makes the virtual cells look like normal grid cells */
+    .virtual-grid {
+        display: flex; flex-wrap: wrap; gap: 0.75rem;
+    }
+    
+    .virtual-cell {
+        width: 150px; min-height: 70px; padding: 0.5rem 0.6rem;
+        border: 1px solid var(--border); border-radius: 8px;
+        background: var(--bg-main); cursor: pointer;
+        display: flex; flex-direction: column; justify-content: center;
+        transition: all 0.2s; position: relative;
+    }
+    .virtual-cell:hover { background: var(--bg-hover); border-color: var(--accent); }
+    .virtual-cell.filled { background: rgba(79, 106, 245, 0.06); border-left: 3px solid var(--accent); }
+    .virtual-cell.filled:hover { background: rgba(79, 106, 245, 0.12); }
+    .virtual-cell.empty { border: 1px dashed var(--border); align-items: center; text-align: center; color: var(--text-muted); }
+    .virtual-cell.empty:hover { border-color: var(--accent); color: var(--accent); background: rgba(79, 106, 245, 0.03); }
+    
+    #modal-context {
+        background: var(--bg-main); padding: 0.75rem; border-radius: 8px; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem; display: flex; justify-content: space-between; border: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-college" id="sidebarCollege"></div>
+  <nav id="sideNav"></nav>
+  <div class="sidebar-footer">
+    <div class="theme-row">
+      <span class="theme-label">
+        <span id="themeIcon"><svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
+        <span id="themeLabel">Light mode</span>
+      </span>
+      <label class="toggle-switch"><input type="checkbox" id="themeToggle"/><span class="toggle-track"></span></label>
+    </div>
+    <div class="user-pill">
+      <div class="user-avatar" id="userAvatar">?</div>
+      <div class="user-info"><div class="user-name" id="userName">…</div><div class="user-role" id="userRole">admin</div></div>
+      <button class="btn-logout" id="logoutBtn" title="Sign out">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div style="width: 100%;">
+      <div><h1 class="page-title">Master Timetable</h1><p class="page-subtitle">Edit the fixed weekly timetable — click any cell to assign or change</p></div>
+      
+      <div class="topbar-controls">
+        <div class="day-toggle">
+          <button class="day-btn active" data-day="monday">Monday</button>
+          <button class="day-btn" data-day="tuesday">Tuesday</button>
+          <button class="day-btn" data-day="wednesday">Wednesday</button>
+          <button class="day-btn" data-day="thursday">Thursday</button>
+          <button class="day-btn" data-day="friday">Friday</button>
+          <button class="day-btn" data-day="saturday">Saturday</button>
+        </div>
+        
+        <div style="display: flex; gap: 0.75rem;">
+          <button class="btn-export" id="exportExcelBtn">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> Excel
+          </button>
+          <button class="btn-export" id="exportPdfBtn">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15h2v4H9z"/><path d="M13 15h3v4"/><path d="M13 17h2"/></svg> PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="content" style="overflow-x: auto;">
+    
+    <div id="gridContainer">
+      <div class="grid-placeholder grid-wrap">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <div>Loading timetable…</div>
+      </div>
+    </div>
+
+    <div class="virtual-section" style="min-width: 700px;">
+        <div class="virtual-header">
+            <h3>
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                Virtual lecture
+            </h3>
+        </div>
+        
+        <div id="virtual-grid" class="virtual-grid">
+            <div style="width: 100%; padding: 2rem; text-align: center; color: var(--text-muted); font-style: italic;">
+                <span class="spin" style="display:inline-block; border-color:var(--text-muted); border-top-color:transparent;"></span> Loading virtual load...
+            </div>
+        </div>
+    </div>
+
+  </div>
+</main>
+
+<div class="modal-back" id="cellModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modalTitle">Assign Lecture</div>
+      </div>
+      <button class="modal-close" id="modalClose"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      
+      <div id="modal-context">
+          <span id="modal-ctx-day" style="font-weight: 700; color: var(--accent); text-transform: uppercase;"></span>
+          <span id="modal-ctx-location" style="font-weight: 500;"></span>
+      </div>
+
+      <div class="field">
+        <label>Course *</label>
+        <select id="modalCourse"><option value="">— select course —</option></select>
+      </div>
+      <div class="field" id="csfField" style="display:none">
+        <label>Subject &amp; Faculty *</label>
+        <select id="modalCSF"><option value="">— select subject / faculty —</option></select>
+        <div class="field-hint">Selecting this auto-assigns subject and faculty.</div>
+      </div>
+      <div id="loadingCSF" style="display:none;font-size:.82rem;color:var(--text-muted);padding:.5rem 0">
+        <span class="spin" style="display: inline-block;"></span> Loading options…
+      </div>
+
+      <div id="virtualTimeContainer" style="display:none; margin-top: 1rem;">
+        <div style="display: flex; gap: 1rem;">
+          <div class="field" style="flex: 1;">
+            <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted);">Virtual Start Time (Optional)</label>
+            <input type="time" id="virtualStartTime" style="width: 100%; padding: 0.45rem 0.6rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-input); color: var(--text-primary); font-size: 0.85rem;">
+          </div>
+          <div class="field" style="flex: 1;">
+            <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted);">Virtual End Time (Optional)</label>
+            <input type="time" id="virtualEndTime" style="width: 100%; padding: 0.45rem 0.6rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-input); color: var(--text-primary); font-size: 0.85rem;">
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <div>
+        <button class="btn btn-danger btn-sm" id="clearCellBtn" style="display:none">
+          <svg viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>Clear Cell
+        </button>
+      </div>
+      <div style="display:flex;gap:.75rem">
+        <button class="btn btn-ghost btn-sm" id="modalCancel">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="modalSave" disabled>
+          <svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg>Save
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+<script type="module">
+  import { requireRole } from '../js/auth/session.js';
+  import { initSidebar } from '../js/components/sidebar.js';
+  import { preloadLogoForPDF } from '../js/utils/exportHelpers.js';
+  import {
+    getTimeSlots, getActiveRooms, getMasterTimetable,
+    upsertMasterEntry, clearMasterEntry,
+    getCSFForCourse, getAllActiveCourses
+  } from '../js/modules/masterTimetable.js';
+
+  const session = await requireRole('admin');
+  initSidebar(session, 'timetable');
+  preloadLogoForPDF();
+  const generatedBy = session?.profile?.full_name ?? 'Admin';
+
+  function toast(msg, type='success') {
+    const c = document.getElementById('toast');
+    const el = document.createElement('div');
+    el.className = `toast-item ${type}`;
+    el.textContent = msg;
+    c.appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+  }
+
+  // ── State ──────────────────────────────────────────────────────────
+  let currentDayType = 'monday';
+  function slotDayType(day) { return day === 'saturday' ? 'saturday' : 'weekday'; }
+  let courses = [];
+  let timeSlots = [], rooms = [], ttMap = {};
+  
+  let modalTimeSlotId = null, modalRoomId = null;
+  let existingEntry = null, tsCourse = null, tsCSF = null, csfOptions = [];
+  let virtualRoomId = null;
+  let isVirtualAssignment = false;
+
+  document.querySelectorAll('.day-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentDayType = btn.dataset.day;
+      loadGrid();
+    });
+  });
+
+  async function loadGrid() {
+    document.getElementById('gridContainer').innerHTML = '<div class="grid-placeholder grid-wrap"><div><span class="spin" style="display:inline-block; border-color:var(--text-muted); border-top-color:transparent;"></span> Loading physical grid…</div></div>';
+    document.getElementById('virtual-grid').innerHTML = '<div style="width: 100%; padding: 2rem; text-align: center; color: var(--text-muted); font-style: italic;"><span class="spin" style="display:inline-block; border-color:var(--text-muted); border-top-color:transparent;"></span> Loading virtual load...</div>';
+    
+    try {
+      const allRooms = await getActiveRooms();
+      
+      rooms = allRooms.filter(r => {
+          if(r.room_code === 'VIRTUAL') {
+              virtualRoomId = r.id;
+              return false;
+          }
+          return true;
+      });
+
+      [courses, timeSlots, ttMap] = await Promise.all([
+        getAllActiveCourses(),
+        getTimeSlots(slotDayType(currentDayType)),
+        getMasterTimetable(currentDayType) 
+      ]);
+
+      renderGrid();
+      renderVirtualGrid();
+
+    } catch(e) {
+      toast(e.message, 'error');
+      document.getElementById('gridContainer').innerHTML = '<div class="grid-placeholder grid-wrap"><div>Failed to load timetable.</div></div>';
+      document.getElementById('virtual-grid').innerHTML = '<div style="width: 100%; padding: 2rem; text-align: center; color: var(--error);">Failed to load virtual lectures.</div>';
+    }
+  }
+
+  function getCourseLabel(course) {
+      if(!course) return '—';
+      return course.division ? `${course.year} ${course.program} ${course.division}` : `${course.year} ${course.program}`;
+  }
+
+  // Render Physical Grid
+  function renderGrid() {
+    const colCount  = 1 + rooms.length;
+    const gridStyle = `grid-template-columns: 88px repeat(${rooms.length}, minmax(110px,1fr))`;
+
+    let html = `<div class="grid-wrap"><div class="grid-header" style="${gridStyle}">
+      <div class="gh-cell">Time</div>
+${rooms.map(r => `<div class="gh-cell">${r.room_code}</div>`).join('')}
+</div>`;
+
+    for (const slot of timeSlots) {
+      html += `<div class="slot-row${slot.slot_type !== 'lecture' ? ' is-break' : ''}" style="${gridStyle}">`;
+      html += `<div class="slot-time"><span class="tl">${slot.slot_label}</span><span class="tr">${slot.start_time.slice(0,5)}–${slot.end_time.slice(0,5)}</span></div>`;
+
+      if (slot.slot_type !== 'lecture') {
+        const lbl = slot.slot_type === 'lunch' ? '🍽 Lunch Break' : '☕ Recess';
+        html += `<div class="break-label" style="grid-column:2/${colCount+1}">${lbl}</div>`;
+      } else {
+        for (const room of rooms) {
+          const entry = ttMap[slot.id]?.[room.id];
+          if (entry) {
+            html += `<div class="cell filled" data-ts="${slot.id}" data-room="${room.id}" data-entry="${entry.id}">
+              <div class="cell-course">${getCourseLabel(entry.course)}</div>
+              <div class="cell-subject">${entry.subject?.subject_name ?? '—'}</div>
+              <div class="cell-faculty">${entry.faculty?.full_name ?? '—'}</div>
+            </div>`;
+          } else {
+            html += `<div class="cell" data-ts="${slot.id}" data-room="${room.id}">
+              <div class="cell-add"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add</div>
+            </div>`;
+          }
+        }
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+    document.getElementById('gridContainer').innerHTML = html;
+
+    document.querySelectorAll('.cell[data-ts]').forEach(cell => {
+      cell.addEventListener('click', () => openModal(cell.dataset.ts, cell.dataset.room, cell.dataset.entry, false));
+    });
+  }
+
+  // Render Virtual Grid
+  function renderVirtualGrid() {
+      const container = document.getElementById('virtual-grid');
+      
+      if (!virtualRoomId) {
+          container.innerHTML = `<div style="width: 100%; padding: 2rem; text-align: center; color: var(--text-muted); font-style: italic;">Virtual room not configured in database. Contact administrator.</div>`;
+          return;
+      }
+
+      const virtualEntries = ttMap['null'] ? Object.values(ttMap['null']) : [];
+
+      let html = '';
+      virtualEntries.forEach(entry => {
+          // Format Virtual time if exists
+          const timeDisplay = (entry.virtual_start_time && entry.virtual_end_time) 
+            ? `<div style="font-size:0.6rem; color:var(--text-muted); margin-bottom: 3px; font-weight:600;">${entry.virtual_start_time.slice(0,5)} - ${entry.virtual_end_time.slice(0,5)}</div>` 
+            : '';
+
+          html += `
+          <div class="virtual-cell filled" data-entry="${entry.id}">
+              ${timeDisplay}
+              <div class="cell-course">${getCourseLabel(entry.course)}</div>
+              <div class="cell-subject">${entry.subject?.subject_name ?? '—'}</div>
+              <div class="cell-faculty">${entry.faculty?.full_name ?? '—'}</div>
+          </div>`;
+      });
+
+      // The new empty cell format
+      html += `
+      <div class="virtual-cell empty" id="btn-add-virtual">
+          <div class="cell-add"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add more Lecture</div>
+      </div>`;
+
+      container.innerHTML = html;
+
+      document.querySelectorAll('.virtual-cell.filled').forEach(card => {
+          card.addEventListener('click', () => openModal(null, virtualRoomId, card.dataset.entry, true));
+      });
+
+      document.getElementById('btn-add-virtual').addEventListener('click', () => {
+          openModal(null, virtualRoomId, null, true);
+      });
+  }
+
+  // ── Exports (PDF & Excel) ──────────────────────────────────────────────
+
+  document.getElementById('exportPdfBtn').addEventListener('click', () => {
+    if (!timeSlots.length || !rooms.length) return toast('No timetable data to export', 'error');
+    if (!window.jspdf) { toast('PDF library not loaded.', 'error'); return; }
+    
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a0' });
+    const dayCapitalized = currentDayType.charAt(0).toUpperCase() + currentDayType.slice(1);
+    const pageW = doc.internal.pageSize.width;
+    const pageH = doc.internal.pageSize.height;
+
+const head = [['Time', ...rooms.map(r => `${r.room_code}`)]];
+    const body = [];
+
+    timeSlots.forEach(slot => {
+      const timeLabel = slot.slot_type === 'lecture'
+          ? `${slot.slot_label}\n\n${slot.start_time.slice(0,5)} - ${slot.end_time.slice(0,5)}`
+          : `${slot.slot_label}\n${slot.start_time.slice(0,5)} - ${slot.end_time.slice(0,5)}`;
+
+      if (slot.slot_type !== 'lecture') {
+        const lbl = slot.slot_type === 'lunch' ? 'Lunch Break' : 'Recess';
+        body.push([
+          { content: timeLabel, styles: { fontStyle: 'bold', valign: 'middle', halign: 'center', fillColor: [240, 240, 245] } },
+          { content: lbl, colSpan: rooms.length, styles: { halign: 'center', valign: 'middle', fontStyle: 'italic', textColor: [140, 140, 140] } }
+        ]);
+      } else {
+        const rowData = [{ content: timeLabel, styles: { fontStyle: 'bold', valign: 'middle', halign: 'center', fillColor: [240, 240, 245] } }];
+        rooms.forEach(room => {
+          const entry = ttMap[slot.id]?.[room.id];
+          if (entry) {
+            rowData.push({ content: `${getCourseLabel(entry.course)}\n${entry.subject?.subject_name || ''}\n${entry.faculty?.full_name || ''}`, styles: { halign: 'center', valign: 'middle' } });
+          } else {
+            rowData.push({ content: '-', styles: { halign: 'center', valign: 'middle', textColor: [200, 200, 200] } });
+          }
+        });
+        body.push(rowData);
+      }
+    });
+
+    doc.autoTable({
+      head, body, startY: 330, theme: 'grid',
+      styles: { fontSize: 14, cellPadding: 16, valign: 'middle', halign: 'center', overflow: 'linebreak', lineColor: [180, 180, 180], lineWidth: 1 },
+      headStyles: { fillColor: [26, 34, 68], textColor: 255, fontStyle: 'bold', fontSize: 16, halign: 'center' },
+      columnStyles: { 0: { cellWidth: 160, fontStyle: 'bold' } },
+      margin: { top: 330, left: 80, right: 80, bottom: 80 },
+      tableWidth: 'auto',
+      didParseCell(data) {
+        if (data.section === 'body' && data.column.index > 0 && data.cell.raw) {
+          const text = String(data.cell.raw.content || data.cell.raw);
+          if (text.includes('Lunch Break') || text.includes('Recess') || text === '-') {
+             data.cell.styles.fillColor = [250, 250, 250];
+          }
+        }
+      },
+      didDrawPage(data) {
+        if(window._ASAS_LOGO_DATA) try { doc.addImage(window._ASAS_LOGO_DATA, 'PNG', 80, 70, 180, 180); } catch(e){}
+        const cx = pageW / 2;
+        doc.setFont('times', 'bold'); doc.setFontSize(46); doc.setTextColor(26, 34, 68);
+        doc.text('B. K. Birla Night College, Kalyan', cx, 100, { align: 'center' });
+        doc.setFont('times', 'normal'); doc.setFontSize(26); doc.setTextColor(50, 60, 90);
+        doc.text('(Affiliated to University of Mumbai)', cx, 140, { align: 'center' });
+        doc.setFont('times', 'bolditalic'); doc.setFontSize(30);
+        doc.text('Commerce & Management', cx, 185, { align: 'center' });
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(34); doc.setTextColor(26, 34, 68);
+        doc.text(`Master Timetable — ${dayCapitalized}`, cx, 250, { align: 'center' });
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(16); doc.setTextColor(120);
+        doc.text(`Report Generated By: ${generatedBy}`, 80, pageH - 40);
+        doc.text(`Report Generated On: ${new Date().toLocaleString('en-IN')}`, 80, pageH - 20);
+        doc.text(`Page ${data.pageNumber}`, pageW / 2, pageH - 20, { align: 'center' });
+      }
+    });
+
+    const virtualEntries = ttMap['null'] ? Object.values(ttMap['null']) : [];
+    if (virtualEntries.length > 0) {
+        let remarksStartY = doc.lastAutoTable.finalY + 40;
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(22); doc.setTextColor(26, 34, 68);
+        doc.text('Virtual lecture', 80, remarksStartY);
+
+        const vBody = virtualEntries.map(e => {
+            const vt = (e.virtual_start_time && e.virtual_end_time) ? `${e.virtual_start_time.slice(0,5)} - ${e.virtual_end_time.slice(0,5)}` : 'Flexible';
+            return [vt, getCourseLabel(e.course), e.subject?.subject_name||'-', e.faculty?.full_name||'-'];
+        });
+
+        doc.autoTable({
+            head: [['Time', 'Course', 'Subject', 'Faculty']],
+            body: vBody,
+            startY: remarksStartY + 20,
+            theme: 'grid',
+            styles: { fontSize: 16, cellPadding: 12, valign: 'middle', lineColor: [180, 180, 180], lineWidth: 1 },
+            headStyles: { fillColor: [240, 240, 245], textColor: [26, 34, 68], fontStyle: 'bold', fontSize: 18, halign: 'left' },
+            margin: { left: 80, right: 80, bottom: 80 }
+        });
+    }
+
+    doc.save(`Master_Timetable_${dayCapitalized}.pdf`);
+  });
+
+  document.getElementById('exportExcelBtn').addEventListener('click', () => {
+    if (!timeSlots.length || !rooms.length) return toast('No timetable data to export', 'error');
+    const dayCapitalized = currentDayType.charAt(0).toUpperCase() + currentDayType.slice(1);
+    
+    const wsData = [];
+    const merges = [];
+
+    const headRow = ["Time"];
+   rooms.forEach(r => headRow.push(`${r.room_code}`));
+    wsData.push(headRow);
+
+    let rowIndex = 1;
+    timeSlots.forEach(slot => {
+       const timeLabel = slot.slot_type === 'lecture'
+            ? `${slot.slot_label}\n\n${slot.start_time.slice(0,5)} - ${slot.end_time.slice(0,5)}`
+            : `${slot.slot_label}\n${slot.start_time.slice(0,5)} - ${slot.end_time.slice(0,5)}`;
+
+       if (slot.slot_type !== 'lecture') {
+          const lbl = slot.slot_type === 'lunch' ? 'Lunch Break' : 'Recess';
+          const row = [timeLabel, lbl];
+          for (let i = 1; i < rooms.length; i++) row.push("");
+          wsData.push(row);
+          merges.push({ s: { r: rowIndex, c: 1 }, e: { r: rowIndex, c: rooms.length } });
+          rowIndex += 1;
+       } else {
+          const row1 = [timeLabel]; const row2 = [""]; const row3 = [""];
+          rooms.forEach(room => {
+             const entry = ttMap[slot.id]?.[room.id];
+             if (entry) {
+                row1.push(getCourseLabel(entry.course)); row2.push(entry.subject?.subject_name||'-'); row3.push(entry.faculty?.full_name||'-');
+             } else {
+                row1.push("-"); row2.push(""); row3.push("");
+             }
+          });
+          wsData.push(row1, row2, row3);
+          merges.push({ s: { r: rowIndex, c: 0 }, e: { r: rowIndex + 2, c: 0 } });
+          rowIndex += 3;
+       }
+    });
+
+    const virtualEntries = ttMap['null'] ? Object.values(ttMap['null']) : [];
+    if(virtualEntries.length > 0) {
+        wsData.push([]);
+        wsData.push(["Virtual lecture", "", "", ""]);
+        wsData.push(["Time", "Course", "Subject", "Faculty"]);
+        virtualEntries.forEach(e => {
+            const vt = (e.virtual_start_time && e.virtual_end_time) ? `${e.virtual_start_time.slice(0,5)} - ${e.virtual_end_time.slice(0,5)}` : 'Flexible';
+            wsData.push([vt, getCourseLabel(e.course), e.subject?.subject_name||'-', e.faculty?.full_name||'-']);
+        });
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!merges'] = merges;
+    const cols = [{ wch: 18 }];
+    rooms.forEach(() => { cols.push({ wch: 30 }); });
+    ws['!cols'] = cols;
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Timetable");
+    XLSX.writeFile(wb, `Master_Timetable_${dayCapitalized}.xlsx`);
+  });
+
+  // ── Modal Handlers ──────────────────────────────────────────────────
+  async function openModal(timeSlotId, roomId, entryId, isVirtual) {
+    modalTimeSlotId = isVirtual ? null : timeSlotId;
+    modalRoomId     = roomId;
+    existingEntry   = null;
+    isVirtualAssignment = isVirtual;
+
+    document.getElementById('modalTitle').textContent = entryId ? 'Edit Lecture' : 'Assign Lecture';
+    document.getElementById('modal-ctx-day').textContent = currentDayType;
+    
+    // Toggle Virtual Time Fields visibility
+    const vtContainer = document.getElementById('virtualTimeContainer');
+    if (isVirtual) {
+        document.getElementById('modal-ctx-location').textContent = `VIRTUAL LECTURE`;
+        vtContainer.style.display = 'block';
+        document.getElementById('virtualStartTime').value = '';
+        document.getElementById('virtualEndTime').value = '';
+    } else {
+        const slot = timeSlots.find(s => s.id === timeSlotId);
+        const room = rooms.find(r => r.id === roomId);
+       document.getElementById('modal-ctx-location').textContent = `${room?.room_code} | ${slot?.start_time?.slice(0,5)}–${slot?.end_time?.slice(0,5)}`;
+        vtContainer.style.display = 'none';
+    }
+
+    document.getElementById('clearCellBtn').style.display = entryId ? '' : 'none';
+    document.getElementById('modalSave').disabled = true;
+    document.getElementById('csfField').style.display = 'none';
+
+    if (tsCourse) { tsCourse.destroy(); tsCourse = null; }
+    if (tsCSF)    { tsCSF.destroy();    tsCSF    = null; }
+
+    const cSelect = document.getElementById('modalCourse');
+    cSelect.innerHTML = '<option value="">— select course —</option>' +
+      courses.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
+
+    tsCourse = new TomSelect('#modalCourse', {
+      placeholder: 'Search course…',
+      onChange: async (val) => {
+        document.getElementById('csfField').style.display  = 'none';
+        document.getElementById('loadingCSF').style.display = 'flex';
+        document.getElementById('modalSave').disabled = true;
+        if (!val) { document.getElementById('loadingCSF').style.display = 'none'; return; }
+        try {
+          csfOptions = await getCSFForCourse(val);
+          if (tsCSF) { tsCSF.destroy(); tsCSF = null; }
+          const csfSel = document.getElementById('modalCSF');
+          csfSel.innerHTML = '<option value="">— select subject / faculty —</option>' +
+            csfOptions.map(o => `<option value="${o.csfId}">${o.label}</option>`).join('');
+          tsCSF = new TomSelect('#modalCSF', {
+            placeholder: 'Search subject / faculty…',
+            onChange: (v) => { document.getElementById('modalSave').disabled = !v; }
+          });
+          document.getElementById('csfField').style.display   = '';
+          document.getElementById('loadingCSF').style.display = 'none';
+        } catch(e) {
+          toast(e.message, 'error');
+          document.getElementById('loadingCSF').style.display = 'none';
+        }
+      }
+    });
+
+    if (entryId) {
+      if (isVirtual) {
+          existingEntry = ttMap['null']?.[entryId]; 
+      } else {
+          existingEntry = ttMap[timeSlotId]?.[roomId];
+      }
+      if (existingEntry) {
+          if (existingEntry.course_id) tsCourse.setValue(existingEntry.course_id, true);
+          if (isVirtual) {
+              document.getElementById('virtualStartTime').value = existingEntry.virtual_start_time || '';
+              document.getElementById('virtualEndTime').value = existingEntry.virtual_end_time || '';
+          }
+      }
+    }
+
+    document.getElementById('cellModal').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('cellModal').classList.remove('open');
+    modalTimeSlotId = modalRoomId = existingEntry = null;
+  }
+
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  document.getElementById('modalCancel').addEventListener('click', closeModal);
+  document.getElementById('cellModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('cellModal')) closeModal();
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+  document.getElementById('modalSave').addEventListener('click', async () => {
+    const courseId = tsCourse?.getValue();
+    const csfId    = tsCSF?.getValue();
+    if (!courseId || !csfId) return;
+
+    const opt = csfOptions.find(o => o.csfId === csfId);
+    if (!opt) return;
+
+    // Get new time values if virtual
+    const virtualStartTime = document.getElementById('virtualStartTime').value || null;
+    const virtualEndTime = document.getElementById('virtualEndTime').value || null;
+
+    const btn = document.getElementById('modalSave');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span> Saving…';
+
+    try {
+      await upsertMasterEntry({
+        entryId:     existingEntry?.id || null, 
+        dayType:     currentDayType,
+        timeSlotId:  modalTimeSlotId,
+        roomId:      modalRoomId,
+        csfId,
+        courseId,
+        subjectId:   opt.subjectId,
+        facultyId:   opt.facultyId,
+        // Pass these down to the DB update module function
+        virtual_start_time: isVirtualAssignment ? virtualStartTime : null,
+        virtual_end_time: isVirtualAssignment ? virtualEndTime : null
+      });
+      toast('Timetable assigned successfully.');
+      closeModal();
+      await loadGrid();
+    } catch(e) {
+      toast(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="20,6 9,17 4,12"/></svg>Save';
+    }
+  });
+
+  document.getElementById('clearCellBtn').addEventListener('click', async () => {
+    if (!existingEntry?.id) return;
+    const btn = document.getElementById('clearCellBtn');
+    btn.disabled = true;
+    try {
+      await clearMasterEntry(existingEntry.id);
+      toast('Lecture removed.', 'warn');
+      closeModal();
+      await loadGrid();
+    } catch(e) {
+      toast(e.message, 'error');
+    } finally { btn.disabled = false; }
+  });
+
+  loadGrid();
+</script>
+</body>
+</html>

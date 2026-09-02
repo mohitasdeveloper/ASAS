@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>ASAS — Reports</title>
+  
+  <link rel="stylesheet" href="/css/theme.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css"/>
+  
+  <style>
+    /* Report-specific styles */
+    .report-nav{display:flex;flex-direction:column;gap:.2rem;width:200px;flex-shrink:0}
+    .report-nav-btn{text-align:left;background:transparent;border:none;border-radius:8px;
+      padding:.55rem .9rem;font-family:var(--ff-body);font-size:.82rem;font-weight:500;
+      color:var(--text-muted);cursor:pointer;transition:background .15s,color .15s;width:100%}
+    .report-nav-btn:hover{background:var(--bg-hover);color:var(--text-primary)}
+    .report-nav-btn.active{background:rgba(79,106,245,.15);color:var(--accent);font-weight:600}
+    .report-nav-label{font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+      color:var(--text-muted);padding:.4rem .9rem .15rem;margin-top:.3rem}
+    .report-layout{display:flex;gap:1.25rem;align-items:flex-start}
+    .report-panel{flex:1;min-width:0}
+    .report-section{display:none}
+    .report-section.active{display:block}
+    .report-header{display:flex;align-items:center;justify-content:space-between;
+      margin-bottom:1rem;flex-wrap:wrap;gap:.75rem}
+    .report-title{font-family:var(--ff-display);font-size:1.2rem;color:var(--text-primary)}
+    .export-btns{display:flex;gap:.5rem;align-items:center}
+    .filter-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;
+      padding:1rem 1.25rem;margin-bottom:1rem;
+      display:flex;align-items:flex-end;gap:.75rem;flex-wrap:wrap;
+      transition:background .25s,border-color .25s}
+    .filter-card .field{min-width:140px;flex:1}
+    .result-count{font-size:.8rem;color:var(--text-muted);margin-bottom:.75rem}
+    
+    /* Summary counts */
+    .mini-stats{display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:1rem}
+    .mini-stat{background:var(--bg-card);border:1px solid var(--border);border-radius:9px;
+      padding:.5rem .9rem;min-width:80px;text-align:center;transition:background .25s,border-color .25s}
+    .mini-stat-val{font-size:1.3rem;font-family:var(--ff-display);font-weight:400;line-height:1}
+    .mini-stat-lbl{font-size:.62rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+      color:var(--text-muted);margin-top:.1rem}
+      
+    /* Leave type count table */
+    .leave-summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+      gap:.6rem;margin-top:.75rem}
+    .leave-type-chip{background:var(--bg-input);border:1px solid var(--border);border-radius:8px;
+      padding:.55rem .85rem;display:flex;justify-content:space-between;align-items:center;font-size:.82rem}
+    .leave-type-chip strong{color:var(--accent)}
+
+    /* Force Tom Select visibility in hidden tabs & prevent wrapping */
+    .ts-wrapper { width: 100% !important; min-width: 140px; }
+    .ts-wrapper.single .ts-control { display: flex !important; flex-wrap: nowrap !important; align-items: center; overflow: hidden !important; }
+    .ts-wrapper.single .ts-control .item { white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; max-width: 95% !important; pointer-events: none; }
+    .ts-wrapper.single .ts-control input { min-width: 0 !important; }
+    
+    /* Table Search and Sorting UI */
+    .table-wrap { width: 100%; overflow-x: auto; margin-bottom: 1.5rem; }
+    .table-wrap table { width: 100% !important; table-layout: fixed; }
+    .table-search { padding: 0.45rem 0.8rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.82rem; min-width: 220px; background: var(--bg-input); color: var(--text-primary); outline: none; transition: border-color 0.2s; }
+    .table-search:focus { border-color: var(--accent); }
+    th.sortable { cursor: pointer; position: relative; padding-right: 1.5rem !important; user-select: none; transition: background 0.2s; }
+    th.sortable:hover { background: rgba(0,0,0,0.04); }
+    th.sortable::after { content: '↕'; position: absolute; right: 0.4rem; color: var(--text-muted); opacity: 0.4; font-size: 0.9rem; font-weight: normal; }
+
+    /* Percentage / status pills for attendance reports */
+    .stat-chip.chip-green .stat-chip-value{color:var(--success)}
+    .stat-chip.chip-red .stat-chip-value{color:var(--error)}
+    .stat-chip.chip-amber .stat-chip-value{color:var(--warn)}
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-college" id="sidebarCollege"></div>
+  <nav id="sideNav"></nav>
+  <div class="sidebar-footer">
+    <div class="theme-row">
+      <span class="theme-label">
+        <span id="themeIcon"><svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
+        <span id="themeLabel">Light mode</span>
+      </span>
+      <label class="toggle-switch"><input type="checkbox" id="themeToggle"/><span class="toggle-track"></span></label>
+    </div>
+    <div class="user-pill">
+      <div class="user-avatar" id="userAvatar">?</div>
+      <div class="user-info"><div class="user-name" id="userName">…</div><div class="user-role" id="userRole"></div></div>
+      <button class="btn-logout" id="logoutBtn" title="Sign out">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div><h1 class="page-title">Reports</h1><p class="page-subtitle">Analyse student attendance, leaves, and schedule changes</p></div>
+  </div>
+  <div class="content">
+    <div class="report-layout">
+
+      <div class="report-nav" id="reportNav">
+        <div class="report-nav-label">Attendance</div>
+        <button class="report-nav-btn active" data-report="da1">Daily Attendance Summary</button>
+        <button class="report-nav-btn" data-report="da2">Student Attendance Report</button>
+        <button class="report-nav-btn" data-report="da3">Defaulters List</button>
+        <button class="report-nav-btn" data-report="da4">Course-wise Attendance</button>
+        <button class="report-nav-btn" data-report="da5">Subject-wise Attendance</button>
+        <button class="report-nav-btn" data-report="da6">Attendance Pending</button>
+        <div class="report-nav-label">Leave</div>
+        <button class="report-nav-btn" data-report="r3">Leave Summary</button>
+      </div>
+
+      <div class="report-panel">
+        <div class="report-section active" id="da1">
+          <div class="report-header">
+            <div class="report-title">Daily Attendance Summary</div>
+            <div class="export-btns">
+              <input type="text" id="da1Search" class="table-search" placeholder="🔍 Search table..."/>
+              <button class="btn btn-ghost btn-sm" id="da1ExportPdf">PDF</button>
+              <button class="btn btn-ghost btn-sm" id="da1ExportXls">Excel</button>
+            </div>
+          </div>
+          <div class="filter-card">
+            <div class="field"><label>Date</label><input type="text" id="da1Date" placeholder="Pick date" readonly/></div>
+            <div class="field"><label>Course</label><select id="da1Course"><option value="">All Courses</option></select></div>
+            <button class="btn btn-primary btn-sm" id="da1Run">Run Report</button>
+          </div>
+          <div class="stat-chips" id="da1Stats" style="display:none"></div>
+          <div class="result-count" id="da1Count"></div>
+          <div class="table-wrap"><table id="da1Table"><thead><tr><th>Time</th><th>Room</th><th>Course</th><th>Subject</th><th>Faculty</th><th>Present</th><th>Absent</th><th>Not Marked</th><th>Total</th><th>Photo</th></tr></thead><tbody id="da1Body"><tr class="empty-row"><td colspan="10">Select a date and run report.</td></tr></tbody></table></div>
+        </div>
+
+        <div class="report-section" id="da2">
+          <div class="report-header">
+            <div class="report-title">Student Attendance Report</div>
+            <div class="export-btns">
+              <input type="text" id="da2Search" class="table-search" placeholder="🔍 Search table..."/>
+              <button class="btn btn-ghost btn-sm" id="da2ExportPdf">PDF</button>
+              <button class="btn btn-ghost btn-sm" id="da2ExportXls">Excel</button>
+            </div>
+          </div>
+          <div class="filter-card">
+            <div class="field"><label>Course</label><select id="da2Course"><option value="">— select course —</option></select></div>
+            <div class="field"><label>Student</label><select id="da2Student"><option value="">— select course first —</option></select></div>
+            <div class="field"><label>From</label><input type="text" id="da2From" readonly/></div>
+            <div class="field"><label>To</label><input type="text" id="da2To" readonly/></div>
+            <button class="btn btn-primary btn-sm" id="da2Run">Run</button>
+          </div>
+          <div class="stat-chips" id="da2Stats" style="display:none"></div>
+          <div class="result-count" id="da2Count"></div>
+          <div class="table-wrap"><table id="da2Table"><thead><tr><th>Date</th><th>Time</th><th>Subject</th><th>Faculty</th><th>Status</th></tr></thead><tbody id="da2Body"><tr class="empty-row"><td colspan="5">Select a course and student, then run.</td></tr></tbody></table></div>
+        </div>
+
+        <div class="report-section" id="da3">
+          <div class="report-header">
+            <div class="report-title">Defaulters List</div>
+            <div class="export-btns">
+              <input type="text" id="da3Search" class="table-search" placeholder="🔍 Search table..."/>
+              <button class="btn btn-ghost btn-sm" id="da3ExportPdf">PDF</button>
+              <button class="btn btn-ghost btn-sm" id="da3ExportXls">Excel</button>
+            </div>
+          </div>
+          <div class="filter-card">
+            <div class="field"><label>Course</label><select id="da3Course"><option value="">— select course —</option></select></div>
+            <div class="field"><label>From</label><input type="text" id="da3From" readonly/></div>
+            <div class="field"><label>To</label><input type="text" id="da3To" readonly/></div>
+            <div class="field" style="max-width:130px"><label>Threshold %</label><input type="number" id="da3Threshold" value="75" min="0" max="100" step="1" style="width:100%;padding:.5rem .7rem;border-radius:8px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary)"/></div>
+            <button class="btn btn-primary btn-sm" id="da3Run">Run</button>
+          </div>
+          <div class="result-count" id="da3Count"></div>
+          <div class="table-wrap"><table id="da3Table"><thead><tr><th>Student ID</th><th>Name</th><th>Present</th><th>Absent</th><th>Total</th><th>Attendance %</th></tr></thead><tbody id="da3Body"><tr class="empty-row"><td colspan="6">Select a course and run.</td></tr></tbody></table></div>
+        </div>
+
+        <div class="report-section" id="da4">
+          <div class="report-header">
+            <div class="report-title">Course-wise Attendance</div>
+            <div class="export-btns">
+              <input type="text" id="da4Search" class="table-search" placeholder="🔍 Search table..."/>
+              <button class="btn btn-ghost btn-sm" id="da4ExportPdf">PDF</button>
+              <button class="btn btn-ghost btn-sm" id="da4ExportXls">Excel</button>
+            </div>
+          </div>
+          <div class="filter-card">
+            <div class="field"><label>Course</label><select id="da4Course"><option value="">— select course —</option></select></div>
+            <div class="field"><label>From</label><input type="text" id="da4From" readonly/></div>
+            <div class="field"><label>To</label><input type="text" id="da4To" readonly/></div>
+            <button class="btn btn-primary btn-sm" id="da4Run">Run</button>
+          </div>
+          <div class="stat-chips" id="da4Stats" style="display:none"></div>
+          <div class="result-count" id="da4Count"></div>
+          <div class="table-wrap"><table id="da4Table"><thead><tr><th>Date</th><th>Time</th><th>Subject</th><th>Faculty</th><th>Present</th><th>Absent</th><th>Not Marked</th><th>Total</th><th>Photo</th></tr></thead><tbody id="da4Body"><tr class="empty-row"><td colspan="9">Select a course and run.</td></tr></tbody></table></div>
+        </div>
+
+        <div class="report-section" id="da5">
+          <div class="report-header">
+            <div class="report-title">Subject-wise Attendance</div>
+            <div class="export-btns">
+              <input type="text" id="da5Search" class="table-search" placeholder="🔍 Search table..."/>
+              <button class="btn btn-ghost btn-sm" id="da5ExportPdf">PDF</button>
+              <button class="btn btn-ghost btn-sm" id="da5ExportXls">Excel</button>
+            </div>
+          </div>
+          <div class="filter-card">
+            <div class="field"><label>Subject</label><select id="da5Subject"><option value="">— select subject —</option></select></div>
+            <div class="field"><label>From</label><input type="text" id="da5From" readonly/></div>
+            <div class="field"><label>To</label><input type="text" id="da5To" readonly/></div>
+            <button class="btn btn-primary btn-sm" id="da5Run">Run</button>
+          </div>
+          <div class="stat-chips" id="da5Stats" style="display:none"></div>
+          <div class="result-count" id="da5Count"></div>
+          <div class="table-wrap"><table id="da5Table"><thead><tr><th>Date</th><th>Time</th><th>Course</th><th>Faculty</th><th>Present</th><th>Absent</th><th>Not Marked</th><th>Total</th><th>Photo</th></tr></thead><tbody id="da5Body"><tr class="empty-row"><td colspan="9">Select a subject and run.</td></tr></tbody></table></div>
+        </div>
+
+        <div class="report-section" id="da6">
+          <div class="report-header">
+            <div class="report-title">Attendance Pending</div>
+            <div class="export-btns">
+              <input type="text" id="da6Search" class="table-search" placeholder="🔍 Search table..."/>
+              <button class="btn btn-ghost btn-sm" id="da6ExportPdf">PDF</button>
+              <button class="btn btn-ghost btn-sm" id="da6ExportXls">Excel</button>
+            </div>
+          </div>
+          <div class="filter-card">
+            <div class="field"><label>From</label><input type="text" id="da6From" readonly/></div>
+            <div class="field"><label>To</label><input type="text" id="da6To" readonly/></div>
+            <div class="field"><label>Course</label><select id="da6Course"><option value="">All Courses</option></select></div>
+            <button class="btn btn-primary btn-sm" id="da6Run">Run</button>
+          </div>
+          <div class="result-count" id="da6Count"></div>
+          <div class="table-wrap"><table id="da6Table"><thead><tr><th>Date</th><th>Time</th><th>Course</th><th>Subject</th><th>Faculty</th><th>Reason</th><th>Marked/Total</th></tr></thead><tbody id="da6Body"><tr class="empty-row"><td colspan="7">Select a date range and run.</td></tr></tbody></table></div>
+        </div>
+
+        <div class="report-section" id="r3">
+          <div class="report-header">
+            <div class="report-title">Faculty Leave Summary</div>
+            <div class="export-btns">
+              <input type="text" id="r3Search" class="table-search" placeholder="🔍 Search table..."/>
+              <button class="btn btn-ghost btn-sm" id="r3ExportPdf">PDF</button>
+              <button class="btn btn-ghost btn-sm" id="r3ExportXls">Excel</button>
+            </div>
+          </div>
+          <div class="filter-card">
+            <div class="field"><label>Faculty</label><select id="r3Faculty"><option value="">All Faculty</option></select></div>
+            <div class="field"><label>From</label><input type="text" id="r3From" readonly/></div>
+            <div class="field"><label>To</label><input type="text" id="r3To" readonly/></div>
+            <button class="btn btn-primary btn-sm" id="r3Run">Run</button>
+          </div>
+          <div class="result-count" id="r3Count"></div>
+          <div class="table-wrap"><table id="r3Table"><thead><tr><th>Faculty</th><th>Date</th><th>Leave Type</th><th>Reason</th><th>Status</th></tr></thead><tbody id="r3Body"><tr class="empty-row"><td colspan="5">Set filters and run.</td></tr></tbody></table></div>
+          <div id="r3Summary" style="margin-top:1rem"></div>
+        </div>
+
+      </div></div></div>
+</main>
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable/dist/jspdf.plugin.autotable.min.js"></script>
+
+<script type="module">
+  import { requireRole } from '../js/auth/session.js';
+  import { initSidebar } from '../js/components/sidebar.js';
+  import { supabase } from '../js/config/supabase.js';
+  import {
+    getFacultyLeaveSummary, getReportDropdowns, getStudentsForCourse,
+    getDailyAttendanceSummary, getCourseAttendanceReport, getSubjectAttendanceReport,
+    getPendingAttendanceReport, getStudentAttendanceHistory, getDefaultersList,
+    courseLbl, studentName, fmtDate, fmtTime, LEAVE_TYPE_LABELS
+  } from '../js/modules/reports.js';
+  import { exportToExcel, exportToPDF, preloadLogoForPDF } from '../js/utils/exportHelpers.js';
+
+  const session = await requireRole('admin');
+  initSidebar(session, 'reports');
+  preloadLogoForPDF();
+
+  function toast(msg, type='success') {
+    const c = document.getElementById('toast');
+    const el = document.createElement('div');
+    el.className = `toast-item ${type}`;
+    el.textContent = msg;
+    c.appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+  }
+
+  const generatedBy = session.profile.full_name ?? 'Admin';
+
+  // ── Report nav ────────────────────────────────────────────────────
+  document.querySelectorAll('.report-nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.report-nav-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.report-section').forEach(s => s.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.report).classList.add('active');
+    });
+  });
+
+  // ── Load & Sort Dropdowns ─────────────────────────────────────────
+  const { faculty, courses, subjects } = await getReportDropdowns();
+
+  faculty.sort((a,b) => (a.full_name||'').localeCompare(b.full_name||''));
+  courses.sort((a,b) => courseLbl(a).localeCompare(courseLbl(b)));
+  subjects.sort((a,b) => (a.subject_name||'').localeCompare(b.subject_name||''));
+
+  function populateSelect(selId, items, labelFn, valueFn, placeholder='All') {
+    const sel = document.getElementById(selId);
+    if (!sel) return;
+    if (placeholder !== null) {
+      const hasBlank = sel.options.length && sel.options[0].value === '';
+      if (!hasBlank) sel.innerHTML = `<option value="">${placeholder}</option>`;
+    } else {
+      sel.innerHTML = '';
+    }
+    items.forEach(item => {
+      const opt = document.createElement('option');
+      opt.value = valueFn(item);
+      opt.textContent = labelFn(item);
+      sel.appendChild(opt);
+    });
+  }
+
+  const facultyOpts = f => `Prof. ${f.full_name}`;
+  populateSelect('r3Faculty', faculty, facultyOpts, f => f.id);
+
+  const courseOpts = c => courseLbl(c);
+  populateSelect('da1Course', courses, courseOpts, c => c.id, 'All Courses');
+  populateSelect('da6Course', courses, courseOpts, c => c.id, 'All Courses');
+  populateSelect('da2Course', courses, courseOpts, c => c.id, '— select course —');
+  populateSelect('da3Course', courses, courseOpts, c => c.id, '— select course —');
+  populateSelect('da4Course', courses, courseOpts, c => c.id, '— select course —');
+  populateSelect('da5Subject', subjects, s => s.subject_name, s => s.id, '— select subject —');
+
+  // ── Flatpickr init ────────────────────────────────────────────────
+  const fpOpts = { dateFormat:'Y-m-d', disableMobile:true };
+  const today  = new Date().toISOString().slice(0,10);
+  flatpickr('#da1Date', { ...fpOpts, defaultDate: today });
+  ['da2From','da2To','da3From','da3To','da4From','da4To','da5From','da5To',
+   'da6From','da6To','r3From','r3To']
+    .forEach(id => flatpickr('#'+id, fpOpts));
+
+  // ── Tom Select inits ──────────────────────────
+  ['da1Course','da3Course','da4Course','da5Subject','da6Course','r3Faculty'].forEach(id => {
+    try { new TomSelect('#'+id, { allowEmptyOption:true }); } catch {}
+  });
+
+  // Course → Student cascading dropdown for da2
+  let da2StudentTS = null;
+  async function populateDa2Students(courseId) {
+    const sel = document.getElementById('da2Student');
+    sel.innerHTML = `<option value="">Loading students...</option>`;
+    if (da2StudentTS) { da2StudentTS.destroy(); da2StudentTS = null; }
+    try {
+      const students = await getStudentsForCourse(courseId);
+      sel.innerHTML = `<option value="">— select student —</option>` +
+        students.map(s => `<option value="${s.id}">${s.student_id} — ${studentName(s)}</option>`).join('');
+    } catch(e) {
+      sel.innerHTML = `<option value="">Error loading students</option>`;
+      toast(e.message, 'error');
+    }
+    da2StudentTS = new TomSelect('#da2Student', { allowEmptyOption: true });
+  }
+  try {
+    new TomSelect('#da2Course', {
+      allowEmptyOption: true,
+      onChange(value) { if (value) populateDa2Students(value); }
+    });
+  } catch {}
+
+  // ── UI Table Sorting & Filtering ─────────────
+  function bindTableFilter(inputId, tbodyIds) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const ids = Array.isArray(tbodyIds) ? tbodyIds : [tbodyIds];
+    input.addEventListener('input', () => {
+      const term = input.value.toLowerCase();
+      ids.forEach(tid => {
+        const tbody = document.getElementById(tid);
+        if (!tbody) return;
+        tbody.querySelectorAll('tr').forEach(tr => {
+          if (tr.classList.contains('empty-row')) return;
+          tr.style.display = tr.textContent.toLowerCase().includes(term) ? '' : 'none';
+        });
+      });
+    });
+  }
+
+  function makeTableSortable(tableId, tbodyId) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    const ths = table.querySelectorAll('thead th');
+    ths.forEach((th, i) => {
+      th.classList.add('sortable');
+      th.dataset.sort = '';
+      th.addEventListener('click', () => {
+        const tbody = document.getElementById(tbodyId);
+        const rows = Array.from(tbody.querySelectorAll('tr')).filter(r => !r.classList.contains('empty-row'));
+        if (!rows.length) return;
+        const isAsc = th.dataset.sort !== 'asc';
+        ths.forEach(t => t.dataset.sort = '');
+        th.dataset.sort = isAsc ? 'asc' : 'desc';
+        rows.sort((a, b) => {
+          const aTxt = a.children[i]?.textContent.trim() || '';
+          const bTxt = b.children[i]?.textContent.trim() || '';
+          return isAsc ? aTxt.localeCompare(bTxt, undefined, {numeric:true}) : bTxt.localeCompare(aTxt, undefined, {numeric:true});
+        });
+        rows.forEach(r => tbody.appendChild(r));
+      });
+    });
+  }
+
+  function setCount(id, n, label='records') {
+    document.getElementById(id).textContent = `${n} ${label} found.`;
+  }
+  function emptyRow(id, cols, msg) {
+    document.getElementById(id).innerHTML = `<tr class="empty-row"><td colspan="${cols}">${msg}</td></tr>`;
+  }
+  function loadingRow(id, cols) {
+    document.getElementById(id).innerHTML = `<tr class="empty-row"><td colspan="${cols}"><span class="spin"></span> Loading...</td></tr>`;
+  }
+
+  // ── Attendance report badge/format helpers ───────────────────────
+  function statusBadge(status) {
+    const map = { present: 'badge-active', absent: 'badge-inactive', not_recorded: 'badge-inactive' };
+    const lbl = { present: 'Present', absent: 'Absent', not_recorded: 'Not Recorded' };
+    return `<span class="badge ${map[status] ?? 'badge-inactive'}">${lbl[status] ?? status}</span>`;
+  }
+  function photoBadge(has) {
+    return `<span class="badge ${has ? 'badge-active' : 'badge-inactive'}">${has ? '📷 Yes' : 'No'}</span>`;
+  }
+  function pctClass(pct) {
+    if (pct === null || pct === undefined) return 'grey';
+    if (pct >= 75) return 'green';
+    if (pct >= 50) return 'amber';
+    return 'red';
+  }
+  function pctBadge(pct) {
+    const cls = pctClass(pct);
+    const badgeCls = cls === 'green' ? 'badge-active' : 'badge-inactive';
+    return `<span class="badge ${badgeCls}">${pct}%</span>`;
+  }
+  function statChips(items) {
+    return items.map(([label, value, color]) =>
+      `<div class="stat-chip chip-${color}"><div class="stat-chip-label">${label}</div><div class="stat-chip-value">${value}</div></div>`
+    ).join('');
+  }
+  // Weighted overall average: total present ÷ total roster-slots across all
+  // lectures — consistent with how % is computed everywhere else on this page
+  // (never a simple average of each lecture's own %).
+  function avgAttendance(rows) {
+    const withRoster = rows.filter(r => r.total_students > 0);
+    const totalPresent = withRoster.reduce((s,r)=>s+r.present,0);
+    const totalSlots = withRoster.reduce((s,r)=>s+r.total_students,0);
+    const avgCount = withRoster.length ? Math.round((totalPresent / withRoster.length) * 10) / 10 : 0;
+    const avgPct = totalSlots > 0 ? Math.round((totalPresent / totalSlots) * 1000) / 10 : null;
+    return { avgCount, avgPct };
+  }
+
+  // ── DA1: Daily Attendance Summary ─────────────────────────────────
+  let da1Data = [];
+  document.getElementById('da1Run').addEventListener('click', async () => {
+    const date = document.getElementById('da1Date').value;
+    if (!date) { toast('Pick a date.', 'warn'); return; }
+    const courseId = document.getElementById('da1Course').value || null;
+    loadingRow('da1Body', 10);
+    document.getElementById('da1Search').value = '';
+    document.getElementById('da1Stats').style.display = 'none';
+    try {
+      const rows = await getDailyAttendanceSummary(date, courseId);
+      rows.sort((a,b) => (a.time_slot?.sort_order ?? 0) - (b.time_slot?.sort_order ?? 0));
+      da1Data = rows;
+
+      setCount('da1Count', rows.length, 'lecture(s)');
+      if (!rows.length) { emptyRow('da1Body', 10, 'No lectures scheduled for this date.'); return; }
+
+      document.getElementById('da1Body').innerHTML = rows.map(r => `<tr>
+        <td>${fmtTime(r.time_slot?.start_time)}–${fmtTime(r.time_slot?.end_time)}</td>
+        <td>${r.room?.room_code??'—'}</td>
+        <td>${courseLbl(r.course)}</td>
+        <td>${r.subject?.subject_name??'—'}</td>
+        <td>${r.assigned_faculty?.full_name??'—'}</td>
+        <td>${r.present}</td>
+        <td>${r.absent}</td>
+        <td>${r.not_marked}</td>
+        <td>${r.total_students}</td>
+        <td>${photoBadge(r.has_photo)}</td>
+      </tr>`).join('');
+
+      const fullyMarked = rows.filter(r => r.total_students > 0 && r.not_marked === 0).length;
+      const pending = rows.filter(r => r.total_students > 0 && r.not_marked > 0).length;
+      const { avgCount, avgPct } = avgAttendance(rows);
+      const sc = document.getElementById('da1Stats');
+      sc.style.display = '';
+      sc.innerHTML = statChips([
+        ['Total Lectures', rows.length, 'blue'],
+        ['Fully Marked', fullyMarked, 'green'],
+        ['Pending', pending, 'red'],
+        ['Avg Attendance', avgCount + ' students', 'blue'],
+        ['Avg Attendance %', avgPct !== null ? avgPct+'%' : '—', pctClass(avgPct)],
+      ]);
+    } catch(e) { toast(e.message,'error'); emptyRow('da1Body',10,'Error loading data.'); }
+  });
+
+  function da1ExportRows() {
+    return da1Data.map(r => ({
+      time: `${fmtTime(r.time_slot?.start_time)}–${fmtTime(r.time_slot?.end_time)}`,
+      room: r.room?.room_code??'—', course: courseLbl(r.course),
+      subject: r.subject?.subject_name??'—', faculty: r.assigned_faculty?.full_name??'—',
+      present: r.present, absent: r.absent, notMarked: r.not_marked, total: r.total_students,
+      photo: r.has_photo ? 'Yes' : 'No',
+    }));
+  }
+  const da1Cols = [
+    {header:'Time',key:'time',pdfWidth:26,width:14},{header:'Room',key:'room',pdfWidth:16,width:10},
+    {header:'Course',key:'course',pdfWidth:24,width:16},{header:'Subject',key:'subject',pdfWidth:38,width:26},
+    {header:'Faculty',key:'faculty',pdfWidth:32,width:22},{header:'Present',key:'present',pdfWidth:16,width:10},
+    {header:'Absent',key:'absent',pdfWidth:16,width:10},{header:'Not Marked',key:'notMarked',pdfWidth:20,width:12},
+    {header:'Total',key:'total',pdfWidth:14,width:8},{header:'Photo',key:'photo',pdfWidth:16,width:8},
+  ];
+  document.getElementById('da1ExportPdf').addEventListener('click', () => {
+    if (!da1Data.length) { toast('Run report first.', 'warn'); return; }
+    exportToPDF(da1ExportRows(), da1Cols, 'Daily Attendance Summary', `Daily_Attendance_${document.getElementById('da1Date').value}`, fmtDate(document.getElementById('da1Date').value), generatedBy);
+  });
+  document.getElementById('da1ExportXls').addEventListener('click', () => {
+    if (!da1Data.length) { toast('Run report first.', 'warn'); return; }
+    exportToExcel(da1ExportRows(), da1Cols, `Daily_Attendance_${document.getElementById('da1Date').value}`);
+  });
+
+  // ── DA2: Student Attendance Report ────────────────────────────────
+  let da2Result = null;
+  document.getElementById('da2Run').addEventListener('click', async () => {
+    const courseId = document.getElementById('da2Course').value;
+    const studentId = document.getElementById('da2Student').value;
+    if (!courseId || !studentId) { toast('Select a course and a student.', 'warn'); return; }
+    const from = document.getElementById('da2From').value || null;
+    const to = document.getElementById('da2To').value || null;
+    loadingRow('da2Body', 5);
+    document.getElementById('da2Search').value = '';
+    document.getElementById('da2Stats').style.display = 'none';
+    try {
+      const result = await getStudentAttendanceHistory(studentId, courseId, from, to);
+      da2Result = result;
+      setCount('da2Count', result.rows.length, 'lecture(s)');
+      if (!result.rows.length) { emptyRow('da2Body', 5, 'No lectures found for this range.'); return; }
+
+      document.getElementById('da2Body').innerHTML = result.rows.map(r => `<tr>
+        <td>${fmtDate(r.schedule_date)}</td>
+        <td>${fmtTime(r.time_slot?.start_time)}–${fmtTime(r.time_slot?.end_time)}</td>
+        <td>${r.subject?.subject_name??'—'}</td>
+        <td>${r.assigned_faculty?.full_name??'—'}</td>
+        <td>${statusBadge(r.status)}</td>
+      </tr>`).join('');
+
+      const sc = document.getElementById('da2Stats');
+      sc.style.display = '';
+      sc.innerHTML = statChips([
+        ['Present', result.present, 'green'],
+        ['Absent', result.absent, 'red'],
+        ['Not Recorded', result.notRecorded, 'grey'],
+        ['Total Lectures', result.total, 'blue'],
+        [result.pct !== null ? 'Attendance %' : 'Attendance', result.pct !== null ? result.pct+'%' : '—', pctClass(result.pct)],
+      ]);
+    } catch(e) { toast(e.message,'error'); emptyRow('da2Body',5,'Error loading data.'); }
+  });
+
+  function da2ExportRows() {
+    return da2Result.rows.map(r => ({
+      date: fmtDate(r.schedule_date), time: `${fmtTime(r.time_slot?.start_time)}–${fmtTime(r.time_slot?.end_time)}`,
+      subject: r.subject?.subject_name??'—', faculty: r.assigned_faculty?.full_name??'—',
+      status: r.status === 'present' ? 'Present' : r.status === 'absent' ? 'Absent' : 'Not Recorded',
+    }));
+  }
+  const da2Cols = [
+    {header:'Date',key:'date',pdfWidth:28,width:14},{header:'Time',key:'time',pdfWidth:28,width:14},
+    {header:'Subject',key:'subject',pdfWidth:45,width:28},{header:'Faculty',key:'faculty',pdfWidth:40,width:24},
+    {header:'Status',key:'status',pdfWidth:26,width:14},
+  ];
+  document.getElementById('da2ExportPdf').addEventListener('click', () => {
+    if (!da2Result || !da2Result.rows.length) { toast('Run report first.', 'warn'); return; }
+    const studentSel = document.getElementById('da2Student');
+    const studentLabel = studentSel.options[studentSel.selectedIndex]?.textContent ?? '';
+    const subtitle = `${studentLabel} — ${da2Result.pct}% Attendance (${da2Result.present}/${da2Result.total})`;
+    exportToPDF(da2ExportRows(), da2Cols, 'Student Attendance Report', 'Student_Attendance_Report', subtitle, generatedBy);
+  });
+  document.getElementById('da2ExportXls').addEventListener('click', () => {
+    if (!da2Result || !da2Result.rows.length) { toast('Run report first.', 'warn'); return; }
+    exportToExcel(da2ExportRows(), da2Cols, 'Student_Attendance_Report');
+  });
+
+  // ── DA3: Defaulters List ──────────────────────────────────────────
+  let da3Data = [];
+  document.getElementById('da3Run').addEventListener('click', async () => {
+    const courseId = document.getElementById('da3Course').value;
+    if (!courseId) { toast('Select a course.', 'warn'); return; }
+    const from = document.getElementById('da3From').value || null;
+    const to = document.getElementById('da3To').value || null;
+    const threshold = parseFloat(document.getElementById('da3Threshold').value);
+    const thresholdPct = isNaN(threshold) ? 75 : threshold;
+    loadingRow('da3Body', 6);
+    document.getElementById('da3Search').value = '';
+    try {
+      const { rows, totalLectures } = await getDefaultersList(courseId, from, to, thresholdPct);
+      da3Data = rows;
+      setCount('da3Count', rows.length, `defaulter(s) below ${thresholdPct}% (of ${totalLectures} lecture(s) held)`);
+      if (!rows.length) {
+        emptyRow('da3Body', 6, totalLectures ? 'No defaulters below this threshold.' : 'No lectures held in this range yet.');
+        return;
+      }
+      document.getElementById('da3Body').innerHTML = rows.map(r => `<tr>
+        <td>${r.student.student_id}</td>
+        <td>${studentName(r.student)}</td>
+        <td>${r.present}</td>
+        <td>${r.absent}</td>
+        <td>${r.total}</td>
+        <td>${pctBadge(r.pct)}</td>
+      </tr>`).join('');
+    } catch(e) { toast(e.message,'error'); emptyRow('da3Body',6,'Error loading data.'); }
+  });
+
+  function da3ExportRows() {
+    return da3Data.map(r => ({
+      studentId: r.student.student_id, name: studentName(r.student),
+      present: r.present, absent: r.absent, total: r.total, pct: r.pct + '%',
+    }));
+  }
+  const da3Cols = [
+    {header:'Student ID',key:'studentId',pdfWidth:26,width:14},{header:'Name',key:'name',pdfWidth:50,width:28},
+    {header:'Present',key:'present',pdfWidth:20,width:10},{header:'Absent',key:'absent',pdfWidth:20,width:10},
+    {header:'Total',key:'total',pdfWidth:18,width:10},{header:'Attendance %',key:'pct',pdfWidth:24,width:12},
+  ];
+  document.getElementById('da3ExportPdf').addEventListener('click', () => {
+    if (!da3Data.length) { toast('Run report first.', 'warn'); return; }
+    const courseSel = document.getElementById('da3Course');
+    const courseLabel = courseSel.options[courseSel.selectedIndex]?.textContent ?? '';
+    const threshold = document.getElementById('da3Threshold').value;
+    exportToPDF(da3ExportRows(), da3Cols, 'Defaulters List', 'Defaulters_List', `${courseLabel} — below ${threshold}%`, generatedBy);
+  });
+  document.getElementById('da3ExportXls').addEventListener('click', () => {
+    if (!da3Data.length) { toast('Run report first.', 'warn'); return; }
+    exportToExcel(da3ExportRows(), da3Cols, 'Defaulters_List');
+  });
+
+  // ── DA4: Course-wise Attendance ───────────────────────────────────
+  let da4Data = [];
+  document.getElementById('da4Run').addEventListener('click', async () => {
+    const courseId = document.getElementById('da4Course').value;
+    if (!courseId) { toast('Select a course.', 'warn'); return; }
+    const from = document.getElementById('da4From').value || null;
+    const to = document.getElementById('da4To').value || null;
+    loadingRow('da4Body', 9);
+    document.getElementById('da4Search').value = '';
+    document.getElementById('da4Stats').style.display = 'none';
+    try {
+      const rows = await getCourseAttendanceReport(courseId, from, to);
+      da4Data = rows;
+      setCount('da4Count', rows.length, 'lecture(s)');
+      if (!rows.length) { emptyRow('da4Body', 9, 'No lectures found for this range.'); return; }
+
+      document.getElementById('da4Body').innerHTML = rows.map(r => `<tr>
+        <td>${fmtDate(r.schedule_date)}</td>
+        <td>${fmtTime(r.time_slot?.start_time)}–${fmtTime(r.time_slot?.end_time)}</td>
+        <td>${r.subject?.subject_name??'—'}</td>
+        <td>${r.assigned_faculty?.full_name??'—'}</td>
+        <td>${r.present}</td><td>${r.absent}</td><td>${r.not_marked}</td><td>${r.total_students}</td>
+        <td>${photoBadge(r.has_photo)}</td>
+      </tr>`).join('');
+
+      const fullyMarked = rows.filter(r => r.total_students > 0 && r.not_marked === 0).length;
+      const { avgCount, avgPct } = avgAttendance(rows);
+      const sc = document.getElementById('da4Stats');
+      sc.style.display = '';
+      sc.innerHTML = statChips([
+        ['Total Lectures', rows.length, 'blue'],
+        ['Fully Marked', fullyMarked, 'green'],
+        ['Avg Attendance', avgCount + ' students', 'blue'],
+        ['Avg Attendance %', avgPct !== null ? avgPct+'%' : '—', pctClass(avgPct)],
+      ]);
+    } catch(e) { toast(e.message,'error'); emptyRow('da4Body',9,'Error loading data.'); }
+  });
+
+  function da4ExportRows() {
+    return da4Data.map(r => ({
+      date: fmtDate(r.schedule_date), time: `${fmtTime(r.time_slot?.start_time)}–${fmtTime(r.time_slot?.end_time)}`,
+      subject: r.subject?.subject_name??'—', faculty: r.assigned_faculty?.full_name??'—',
+      present: r.present, absent: r.absent, notMarked: r.not_marked, total: r.total_students,
+      photo: r.has_photo ? 'Yes' : 'No',
+    }));
+  }
+  const da4Cols = [
+    {header:'Date',key:'date',pdfWidth:26,width:14},{header:'Time',key:'time',pdfWidth:26,width:14},
+    {header:'Subject',key:'subject',pdfWidth:40,width:26},{header:'Faculty',key:'faculty',pdfWidth:34,width:22},
+    {header:'Present',key:'present',pdfWidth:16,width:10},{header:'Absent',key:'absent',pdfWidth:16,width:10},
+    {header:'Not Marked',key:'notMarked',pdfWidth:20,width:12},{header:'Total',key:'total',pdfWidth:14,width:8},
+    {header:'Photo',key:'photo',pdfWidth:16,width:8},
+  ];
+  document.getElementById('da4ExportPdf').addEventListener('click', () => {
+    if (!da4Data.length) { toast('Run report first.', 'warn'); return; }
+    const courseSel = document.getElementById('da4Course');
+    const courseLabel = courseSel.options[courseSel.selectedIndex]?.textContent ?? '';
+    exportToPDF(da4ExportRows(), da4Cols, 'Course-wise Attendance', 'Course_Attendance_Report', courseLabel, generatedBy);
+  });
+  document.getElementById('da4ExportXls').addEventListener('click', () => {
+    if (!da4Data.length) { toast('Run report first.', 'warn'); return; }
+    exportToExcel(da4ExportRows(), da4Cols, 'Course_Attendance_Report');
+  });
+
+  // ── DA5: Subject-wise Attendance ──────────────────────────────────
+  let da5Data = [];
+  document.getElementById('da5Run').addEventListener('click', async () => {
+    const subjectId = document.getElementById('da5Subject').value;
+    if (!subjectId) { toast('Select a subject.', 'warn'); return; }
+    const from = document.getElementById('da5From').value || null;
+    const to = document.getElementById('da5To').value || null;
+    loadingRow('da5Body', 9);
+    document.getElementById('da5Search').value = '';
+    document.getElementById('da5Stats').style.display = 'none';
+    try {
+      const rows = await getSubjectAttendanceReport(subjectId, from, to);
+      da5Data = rows;
+      setCount('da5Count', rows.length, 'lecture(s)');
+      if (!rows.length) { emptyRow('da5Body', 9, 'No lectures found for this range.'); return; }
+
+      document.getElementById('da5Body').innerHTML = rows.map(r => `<tr>
+        <td>${fmtDate(r.schedule_date)}</td>
+        <td>${fmtTime(r.time_slot?.start_time)}–${fmtTime(r.time_slot?.end_time)}</td>
+        <td>${courseLbl(r.course)}</td>
+        <td>${r.assigned_faculty?.full_name??'—'}</td>
+        <td>${r.present}</td><td>${r.absent}</td><td>${r.not_marked}</td><td>${r.total_students}</td>
+        <td>${photoBadge(r.has_photo)}</td>
+      </tr>`).join('');
+
+      const fullyMarked = rows.filter(r => r.total_students > 0 && r.not_marked === 0).length;
+      const { avgCount, avgPct } = avgAttendance(rows);
+      const sc = document.getElementById('da5Stats');
+      sc.style.display = '';
+      sc.innerHTML = statChips([
+        ['Total Lectures', rows.length, 'blue'],
+        ['Fully Marked', fullyMarked, 'green'],
+        ['Avg Attendance', avgCount + ' students', 'blue'],
+        ['Avg Attendance %', avgPct !== null ? avgPct+'%' : '—', pctClass(avgPct)],
+      ]);
+    } catch(e) { toast(e.message,'error'); emptyRow('da5Body',9,'Error loading data.'); }
+  });
+
+  function da5ExportRows() {
+    return da5Data.map(r => ({
+      date: fmtDate(r.schedule_date), time: `${fmtTime(r.time_slot?.start_time)}–${fmtTime(r.time_slot?.end_time)}`,
+      course: courseLbl(r.course), faculty: r.assigned_faculty?.full_name??'—',
+      present: r.present, absent: r.absent, notMarked: r.not_marked, total: r.total_students,
+      photo: r.has_photo ? 'Yes' : 'No',
+    }));
+  }
+  const da5Cols = [
+    {header:'Date',key:'date',pdfWidth:26,width:14},{header:'Time',key:'time',pdfWidth:26,width:14},
+    {header:'Course',key:'course',pdfWidth:26,width:16},{header:'Faculty',key:'faculty',pdfWidth:34,width:22},
+    {header:'Present',key:'present',pdfWidth:16,width:10},{header:'Absent',key:'absent',pdfWidth:16,width:10},
+    {header:'Not Marked',key:'notMarked',pdfWidth:20,width:12},{header:'Total',key:'total',pdfWidth:14,width:8},
+    {header:'Photo',key:'photo',pdfWidth:16,width:8},
+  ];
+  document.getElementById('da5ExportPdf').addEventListener('click', () => {
+    if (!da5Data.length) { toast('Run report first.', 'warn'); return; }
+    const subjectSel = document.getElementById('da5Subject');
+    const subjectLabel = subjectSel.options[subjectSel.selectedIndex]?.textContent ?? '';
+    exportToPDF(da5ExportRows(), da5Cols, 'Subject-wise Attendance', 'Subject_Attendance_Report', subjectLabel, generatedBy);
+  });
+  document.getElementById('da5ExportXls').addEventListener('click', () => {
+    if (!da5Data.length) { toast('Run report first.', 'warn'); return; }
+    exportToExcel(da5ExportRows(), da5Cols, 'Subject_Attendance_Report');
+  });
+
+  // ── DA6: Attendance Pending ────────────────────────────────────────
+  let da6Data = [];
+  document.getElementById('da6Run').addEventListener('click', async () => {
+    const from = document.getElementById('da6From').value;
+    const to = document.getElementById('da6To').value;
+    if (!from || !to) { toast('Select a date range.', 'warn'); return; }
+    const courseId = document.getElementById('da6Course').value || null;
+    loadingRow('da6Body', 7);
+    document.getElementById('da6Search').value = '';
+    try {
+      const rows = await getPendingAttendanceReport(from, to, courseId);
+      da6Data = rows;
+      setCount('da6Count', rows.length, 'lecture(s) pending');
+      if (!rows.length) { emptyRow('da6Body', 7, 'Nothing pending — all lectures in this range are complete.'); return; }
+
+      document.getElementById('da6Body').innerHTML = rows.map(r => `<tr>
+        <td>${fmtDate(r.schedule_date)}</td>
+        <td>${fmtTime(r.time_slot?.start_time)}–${fmtTime(r.time_slot?.end_time)}</td>
+        <td>${courseLbl(r.course)}</td>
+        <td>${r.subject?.subject_name??'—'}</td>
+        <td>${r.assigned_faculty?.full_name??'—'}</td>
+        <td><span class="badge ${r.reason === 'Missing photo' ? 'badge-late' : 'badge-inactive'}">${r.reason}</span></td>
+        <td>${r.present + r.absent}/${r.total_students}</td>
+      </tr>`).join('');
+    } catch(e) { toast(e.message,'error'); emptyRow('da6Body',7,'Error loading data.'); }
+  });
+
+  function da6ExportRows() {
+    return da6Data.map(r => ({
+      date: fmtDate(r.schedule_date), time: `${fmtTime(r.time_slot?.start_time)}–${fmtTime(r.time_slot?.end_time)}`,
+      course: courseLbl(r.course), subject: r.subject?.subject_name??'—', faculty: r.assigned_faculty?.full_name??'—',
+      reason: r.reason, marked: `${r.present + r.absent}/${r.total_students}`,
+    }));
+  }
+  const da6Cols = [
+    {header:'Date',key:'date',pdfWidth:26,width:14},{header:'Time',key:'time',pdfWidth:26,width:14},
+    {header:'Course',key:'course',pdfWidth:26,width:16},{header:'Subject',key:'subject',pdfWidth:36,width:24},
+    {header:'Faculty',key:'faculty',pdfWidth:32,width:22},{header:'Reason',key:'reason',pdfWidth:26,width:16},
+    {header:'Marked/Total',key:'marked',pdfWidth:22,width:12},
+  ];
+  document.getElementById('da6ExportPdf').addEventListener('click', () => {
+    if (!da6Data.length) { toast('Run report first.', 'warn'); return; }
+    exportToPDF(da6ExportRows(), da6Cols, 'Attendance Pending', 'Attendance_Pending_Report', '', generatedBy);
+  });
+  document.getElementById('da6ExportXls').addEventListener('click', () => {
+    if (!da6Data.length) { toast('Run report first.', 'warn'); return; }
+    exportToExcel(da6ExportRows(), da6Cols, 'Attendance_Pending_Report');
+  });
+
+  // ── R3: Leave Summary ─────────────────────────────────────────────
+  let r3Data = [];
+  document.getElementById('r3Run').addEventListener('click', async () => {
+    const fId  = document.getElementById('r3Faculty').value;
+    const from = document.getElementById('r3From').value;
+    const to   = document.getElementById('r3To').value;
+    loadingRow('r3Body', 5);
+    document.getElementById('r3Search').value = '';
+    try {
+      const { rows, summary } = await getFacultyLeaveSummary(fId||null, from||null, to||null);
+      
+      rows.sort((a,b) => {
+         const nameA = a.faculty?.full_name || '';
+         const nameB = b.faculty?.full_name || '';
+         if (nameA !== nameB) return nameA.localeCompare(nameB);
+         return (a.leave_date || '').localeCompare(b.leave_date || '');
+      });
+      r3Data = rows;
+      
+      setCount('r3Count', rows.length, 'leave records');
+      if (!rows.length) { emptyRow('r3Body',5,'No leave records found.'); document.getElementById('r3Summary').innerHTML=''; return; }
+      
+      document.getElementById('r3Body').innerHTML = rows.map(r => `<tr>
+        <td><strong>${r.faculty?.full_name??'—'}</strong></td>
+        <td>${fmtDate(r.leave_date)}</td>
+        <td>${LEAVE_TYPE_LABELS[r.leave_type]??r.leave_type}</td>
+        <td style="color:var(--text-muted)">${r.reason??'—'}</td>
+        <td><span class="badge ${r.status==='approved'?'badge-active':'badge-inactive'}">${r.status}</span></td>
+      </tr>`).join('');
+      
+      const sumEl = document.getElementById('r3Summary');
+      summary.sort((a,b) => (a.faculty?.full_name||'').localeCompare(b.faculty?.full_name||''));
+      sumEl.innerHTML = summary.map(s => `
+        <div style="margin-bottom:.85rem">
+          <div style="font-weight:600;font-size:.88rem;margin-bottom:.4rem">${s.faculty.full_name} — ${s.total} day(s)</div>
+          <div class="leave-summary-grid">
+            ${Object.entries(s.counts).map(([type,cnt]) =>
+              `<div class="leave-type-chip">${LEAVE_TYPE_LABELS[type]??type}<strong>${cnt}</strong></div>`).join('')}
+          </div>
+        </div>`).join('');
+    } catch(e) { toast(e.message,'error'); emptyRow('r3Body',5,'Error.'); }
+  });
+  
+ document.getElementById('r3ExportPdf').addEventListener('click', () => {
+    if (!r3Data.length) { toast('Run report first.', 'warn'); return; }
+    if (!window.jspdf) { alert('PDF library not loaded.'); return; }
+
+    const { jsPDF } = window.jspdf;
+    // Using Portrait A4
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+    const pageW = doc.internal.pageSize.width;
+    const pageH = doc.internal.pageSize.height;
+
+    const head = [['Faculty', 'Date', 'Leave Type', 'Reason', 'Status']];
+    const body = r3Data.map(r => [
+      r.faculty?.full_name ?? '—',
+      fmtDate(r.leave_date),
+      LEAVE_TYPE_LABELS[r.leave_type] ?? r.leave_type,
+      r.reason ?? '—',
+      r.status.toUpperCase()
+    ]);
+
+    doc.autoTable({
+      head, body,
+      startY: 150,
+      theme: 'grid',
+      styles: { fontSize: 10, cellPadding: 8, valign: 'middle', overflow: 'linebreak' },
+      headStyles: { fillColor: [26, 34, 68], textColor: 255, fontStyle: 'bold', halign: 'center' },
+      columnStyles: {
+          0: { cellWidth: 'auto', halign: 'left' },
+          1: { cellWidth: 75, halign: 'center' },
+          2: { cellWidth: 80, halign: 'center' },
+          3: { cellWidth: 160, halign: 'left' },
+          4: { cellWidth: 80, halign: 'center' } // Increased to 80 so "APPROVED" stays on one line
+      },
+      // Added "top: 150" so Page 2 and beyond start below the custom header
+      margin: { top: 150, left: 40, right: 40, bottom: 40 }, 
+      didDrawPage: function(data) {
+        if(window._ASAS_LOGO_DATA) try { doc.addImage(window._ASAS_LOGO_DATA, 'PNG', 40, 30, 80, 80); } catch(e){}
+        const cx = pageW / 2;
+        doc.setFont('times', 'bold'); doc.setFontSize(22); doc.setTextColor(26, 34, 68);
+        doc.text('B. K. Birla Night College, Kalyan', cx, 50, { align: 'center' });
+        doc.setFont('times', 'normal'); doc.setFontSize(14); doc.setTextColor(50, 60, 90);
+        doc.text('(Affiliated to University of Mumbai)', cx, 70, { align: 'center' });
+        doc.setFont('times', 'bolditalic'); doc.setFontSize(16);
+        doc.text('Commerce & Management', cx, 90, { align: 'center' });
+        
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(26, 34, 68);
+        doc.text('Faculty Leave Summary', cx, 125, { align: 'center' });
+        
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(120);
+        doc.text(`Report Generated By: ${generatedBy}`, 40, pageH - 20);
+        doc.text(`Report Generated On: ${new Date().toLocaleString('en-IN')}`, 40, pageH - 10);
+        doc.text(`Page ${data.pageNumber}`, pageW / 2, pageH - 15, { align: 'center' });
+      }
+    });
+
+    doc.save('Faculty_Leave_Summary.pdf');
+  });
+  
+  document.getElementById('r3ExportXls').addEventListener('click', () => {
+    const flat = r3Data.map(r=>({faculty:r.faculty?.full_name??'—',date:fmtDate(r.leave_date),
+      type:LEAVE_TYPE_LABELS[r.leave_type]??r.leave_type,reason:r.reason??'—',status:r.status}));
+    exportToExcel(flat,[{header:'Faculty',key:'faculty',width:24},{header:'Date',key:'date'},
+      {header:'Leave Type',key:'type',width:20},{header:'Reason',key:'reason',width:35},{header:'Status',key:'status'}],
+      'Leave_Summary');
+  });
+
+  // ── Bind search + sort on every report table ──────────────────────
+  ['da1','da2','da3','da4','da5','da6','r3'].forEach(prefix => {
+    bindTableFilter(`${prefix}Search`, `${prefix}Body`);
+    makeTableSortable(`${prefix}Table`, `${prefix}Body`);
+  });
+</script>
+</body>
+</html>

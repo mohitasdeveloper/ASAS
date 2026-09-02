@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ASAS — Leave Management</title>
+  
+  <!-- Shared Theme CSS -->
+  <link rel="stylesheet" href="/css/theme.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" />
+  
+  <style>
+    /* Page-specific overrides */
+    .form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1rem; }
+    
+    .quick-bar { display:flex; align-items:flex-end; gap:1rem; flex-wrap:wrap; }
+    .quick-bar .field { flex:1; min-width:200px; }
+    
+    .filters { display:flex; align-items:flex-end; gap:.75rem; flex-wrap:wrap; margin-bottom:1.25rem; }
+    .filters .field { min-width:160px; flex: 1; max-width: 300px; }
+
+    /* Prevent Tom Select from wrapping text to the next line */
+    .ts-wrapper.single .ts-control {
+      display: flex !important;
+      flex-wrap: nowrap !important;
+      align-items: center;
+      overflow: hidden !important;
+    }
+    .ts-wrapper.single .ts-control .item {
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      max-width: 95% !important;
+      pointer-events: none;
+    }
+    .ts-wrapper.single .ts-control input {
+      min-width: 0 !important;
+    }
+
+    /* Leaves-specific badges */
+    .badge-type { background: rgba(79,106,245,.12); color: var(--accent); }
+    .badge-halfday { background: rgba(245,166,35,.12); color: var(--warn); }
+  </style>
+</head>
+<body>
+
+<!-- ── Sidebar ── -->
+<aside class="sidebar">
+  <div class="sidebar-college" id="sidebarCollege"></div>
+  
+  <nav id="sideNav"></nav>
+  
+  <div class="sidebar-footer">
+    <div class="theme-row">
+      <span class="theme-label">
+        <span id="themeIcon"><svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
+        <span id="themeLabel">Light mode</span>
+      </span>
+      <label class="toggle-switch"><input type="checkbox" id="themeToggle"/><span class="toggle-track"></span></label>
+    </div>
+    <div class="user-pill">
+      <div class="user-avatar" id="userAvatar">?</div>
+      <div class="user-info">
+        <div class="user-name" id="userName">…</div>
+        <div class="user-role" id="userRole">admin</div>
+      </div>
+      <button class="btn-logout" id="logoutBtn" title="Sign out">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </div>
+</aside>
+
+<!-- ── Main ── -->
+<main class="main">
+  <div class="topbar">
+    <div>
+      <h1 class="page-title">Leave Management</h1>
+      <p class="page-subtitle">Record and manage faculty leave — admin entry only</p>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- Quick Absent Today -->
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Quick Mark — Absent Today
+      </div>
+      <div class="quick-bar">
+        <div class="field">
+          <label>Faculty Member</label>
+          <select id="quickFacultySelect"><option value="">— select faculty —</option></select>
+        </div>
+        <button class="btn btn-warn" id="quickAbsentBtn" style="flex-shrink:0">
+          <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Mark Absent Today
+        </button>
+      </div>
+    </div>
+
+    <!-- Add Leave Form -->
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        Add Leave Record
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Faculty Member *</label>
+          <select id="leaveFacultySelect"><option value="">— select faculty —</option></select>
+        </div>
+        <div class="field">
+          <label>Leave Date *</label>
+          <input type="text" id="leaveDatePicker" placeholder="Pick a date" readonly />
+        </div>
+        <div class="field">
+          <label>Leave Type *</label>
+          <select id="leaveTypeSelect">
+            <option value="">— select type —</option>
+            <option value="casual">Casual Leave</option>
+            <option value="medical">Medical Leave</option>
+            <option value="earned">Earned Leave</option>
+            <option value="duty">Duty Leave</option>
+            <option value="half_day_morning">Half Day (Morning)</option>
+            <option value="half_day_afternoon">Half Day (Afternoon)</option>
+            <option value="compensatory">Compensatory Leave</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="field" style="grid-column:1/-1">
+          <label>Reason <span style="color:var(--text-muted);font-weight:400;text-transform:none">(optional)</span></label>
+          <textarea id="leaveReason" placeholder="Add a note if needed…"></textarea>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:1.25rem">
+        <button class="btn btn-primary" id="saveLeaveBtn">
+          <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+            <polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg>
+          Save Leave Record
+        </button>
+      </div>
+    </div>
+
+    <!-- Records Table -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div class="card-title" style="padding: 1.5rem 1.5rem 0;">
+        <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/>
+          <line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+          <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/>
+          <line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        Leave Records
+      </div>
+
+      <div class="filters" style="padding: 0 1.5rem;">
+        <div class="field">
+          <label>Filter by Faculty</label>
+          <select id="filterFaculty"><option value="">All Faculty</option></select>
+        </div>
+        <div class="field">
+          <label>From Date</label>
+          <input type="text" id="filterFrom" placeholder="From date" readonly />
+        </div>
+        <div class="field">
+          <label>To Date</label>
+          <input type="text" id="filterTo" placeholder="To date" readonly />
+        </div>
+        <button class="btn btn-primary btn-sm" id="applyFilter">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Apply</button>
+        <button class="btn btn-ghost btn-sm" id="clearFilter">Clear</button>
+      </div>
+
+      <div class="table-wrap" style="border:none;border-radius:0;margin-top:1rem;">
+        <table>
+          <thead>
+            <tr>
+              <th>Faculty Name</th>
+              <th>Date</th>
+              <th>Leave Type</th>
+              <th>Reason</th>
+              <th>Entered By</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="leavesTableBody">
+            <tr class="empty-row"><td colspan="7"><span class="spin" style="display:inline-block"></span> Loading records…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<!-- Confirm Delete Modal -->
+<div class="modal-back" id="deleteModal">
+  <div class="modal">
+    <div class="modal-title">Delete Leave Record?</div>
+    <div class="modal-body" id="deleteModalBody" style="font-size:.88rem;color:var(--text-muted);margin-bottom:1.5rem">This will permanently remove the leave entry.</div>
+    <div class="modal-footer" style="display:flex;gap:.75rem;justify-content:flex-end">
+      <button class="btn btn-ghost" id="deleteCancelBtn">Cancel</button>
+      <button class="btn btn-danger" id="deleteConfirmBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast"></div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+<script type="module">
+  import { requireRole } from '../js/auth/session.js';
+  import { initSidebar } from '../js/components/sidebar.js';
+  import {
+    addLeave, markAbsentToday, deleteLeave,
+    getAllLeaves, getActiveFaculty, leaveTypeLabel, LEAVE_TYPES
+  } from '../js/modules/leaveManager.js';
+
+  // ── Auth guard & Shared Sidebar ──────────────────────────────────
+  const session = await requireRole('admin');
+  initSidebar(session, 'leaves');
+
+  // ── Toast ────────────────────────────────────────────────────────
+  function toast(msg, type = 'success') {
+    const c = document.getElementById('toast');
+    const el = document.createElement('div');
+    el.className = `toast-item ${type}`;
+    el.textContent = msg;
+    c.appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+  }
+
+  // ── Init dropdowns ───────────────────────────────────────────────
+  let faculty = [];
+  let tsQuick, tsLeave, tsFilter;
+
+  async function initFacultyDropdowns() {
+    faculty = await getActiveFaculty();
+    const opt = faculty.map(f => `<option value="${f.id}">${f.full_name}</option>`).join('');
+
+    ['quickFacultySelect','leaveFacultySelect','filterFaculty'].forEach(id => {
+      const el = document.getElementById(id);
+      if (id === 'filterFaculty') el.innerHTML = '<option value="">All Faculty</option>' + opt;
+      else el.innerHTML = '<option value="">— select faculty —</option>' + opt;
+    });
+
+    tsQuick  = new TomSelect('#quickFacultySelect',  { placeholder: 'Search faculty…' });
+    tsLeave  = new TomSelect('#leaveFacultySelect',  { placeholder: 'Search faculty…' });
+    tsFilter = new TomSelect('#filterFaculty',       { placeholder: 'All Faculty' });
+  }
+
+  // ── Flatpickr ────────────────────────────────────────────────────
+  const fpLeave = flatpickr('#leaveDatePicker', { dateFormat: 'Y-m-d', disableMobile: true });
+  const fpFrom  = flatpickr('#filterFrom',      { dateFormat: 'Y-m-d', disableMobile: true });
+  const fpTo    = flatpickr('#filterTo',        { dateFormat: 'Y-m-d', disableMobile: true });
+
+  // ── Load & render table ──────────────────────────────────────────
+  let currentLeaves = [];
+
+  async function loadLeaves(fromDate, toDate, facultyId) {
+    const tbody = document.getElementById('leavesTableBody');
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="7"><span class="spin" style="display:inline-block"></span> Loading…</td></tr>';
+
+    try {
+      let leaves = await getAllLeaves(fromDate, toDate);
+      if (facultyId) leaves = leaves.filter(l => l.faculty?.id === facultyId);
+      currentLeaves = leaves;
+      renderTable(leaves);
+    } catch(e) {
+      toast(e.message, 'error');
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="7">Failed to load records.</td></tr>';
+    }
+  }
+
+  function renderTable(leaves) {
+    const tbody = document.getElementById('leavesTableBody');
+    if (!leaves.length) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="7">No leave records found.</td></tr>';
+      return;
+    }
+
+    const halfTypes = new Set(['half_day_morning','half_day_afternoon']);
+
+    tbody.innerHTML = leaves.map(l => {
+      const badgeClass = l.status === 'approved' ? 'badge-approved' : 'badge-rejected';
+      const typeClass  = halfTypes.has(l.leave_type) ? 'badge-halfday' : 'badge-type';
+      return `<tr data-id="${l.id}">
+        <td><strong style="color:var(--text-primary)">${l.faculty?.full_name ?? '—'}</strong></td>
+        <td style="color:var(--text-muted)">${formatDate(l.leave_date)}</td>
+        <td><span class="badge ${typeClass}">${leaveTypeLabel(l.leave_type)}</span></td>
+        <td style="max-width:200px;color:var(--text-muted)">${l.reason ?? '—'}</td>
+        <td style="color:var(--text-muted)">${l.entered_by_profile?.full_name ?? '—'}</td>
+        <td><span class="badge ${badgeClass}">${l.status}</span></td>
+        <td>
+          <button class="btn btn-danger btn-sm delete-btn" data-id="${l.id}"
+            data-name="${l.faculty?.full_name}" data-date="${l.leave_date}">
+            <svg viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+              <path d="M10 11v6"/><path d="M14 11v6"/>
+              <path d="M9 6V4h6v2"/></svg>Delete</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    // bind delete buttons
+    tbody.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', () => openDeleteModal(btn.dataset.id, btn.dataset.name, btn.dataset.date));
+    });
+  }
+
+  function formatDate(d) {
+    if (!d) return '—';
+    const dt = new Date(d + 'T00:00:00');
+    return dt.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+  }
+
+  // ── Quick absent ─────────────────────────────────────────────────
+  document.getElementById('quickAbsentBtn').addEventListener('click', async () => {
+    const fId = tsQuick.getValue();
+    if (!fId) { toast('Please select a faculty member.', 'error'); return; }
+    const btn = document.getElementById('quickAbsentBtn');
+    btn.disabled = true;
+    try {
+      await markAbsentToday(fId, session.user.id);
+      const name = faculty.find(f => f.id === fId)?.full_name ?? fId;
+      toast(`${name} marked absent for today.`, 'success');
+      tsQuick.clear();
+      await loadLeaves();
+    } catch(e) {
+      toast(e.message, 'error');
+    } finally { btn.disabled = false; }
+  });
+
+  // ── Save leave ───────────────────────────────────────────────────
+  document.getElementById('saveLeaveBtn').addEventListener('click', async () => {
+    const fId      = tsLeave.getValue();
+    const leaveDate= document.getElementById('leaveDatePicker').value;
+    const leaveType= document.getElementById('leaveTypeSelect').value;
+    const reason   = document.getElementById('leaveReason').value.trim();
+
+    if (!fId || !leaveDate || !leaveType) {
+      toast('Please fill in all required fields.', 'error'); return;
+    }
+
+    const btn = document.getElementById('saveLeaveBtn');
+    btn.disabled = true;
+    try {
+      await addLeave(fId, leaveDate, leaveType, reason, session.user.id);
+      toast('Leave record saved.', 'success');
+      tsLeave.clear();
+      fpLeave.clear();
+      document.getElementById('leaveTypeSelect').value = '';
+      document.getElementById('leaveReason').value = '';
+      await loadLeaves();
+    } catch(e) {
+      toast(e.message, 'error');
+    } finally { btn.disabled = false; }
+  });
+
+  // ── Filters ──────────────────────────────────────────────────────
+  document.getElementById('applyFilter').addEventListener('click', () => {
+    const fId  = tsFilter.getValue();
+    const from = document.getElementById('filterFrom').value;
+    const to   = document.getElementById('filterTo').value;
+    loadLeaves(from || null, to || null, fId || null);
+  });
+
+  document.getElementById('clearFilter').addEventListener('click', () => {
+    tsFilter.clear();
+    fpFrom.clear(); fpTo.clear();
+    loadLeaves();
+  });
+
+  // ── Delete modal ─────────────────────────────────────────────────
+  let pendingDeleteId = null;
+
+  function openDeleteModal(id, name, date) {
+    pendingDeleteId = id;
+    document.getElementById('deleteModalBody').textContent =
+      `Delete leave record for ${name} on ${formatDate(date)}? This cannot be undone.`;
+    document.getElementById('deleteModal').classList.add('open');
+  }
+
+  document.getElementById('deleteCancelBtn').addEventListener('click', () => {
+    document.getElementById('deleteModal').classList.remove('open');
+    pendingDeleteId = null;
+  });
+
+  document.getElementById('deleteConfirmBtn').addEventListener('click', async () => {
+    if (!pendingDeleteId) return;
+    const btn = document.getElementById('deleteConfirmBtn');
+    btn.disabled = true;
+    try {
+      await deleteLeave(pendingDeleteId);
+      toast('Leave record deleted.', 'success');
+      document.getElementById('deleteModal').classList.remove('open');
+      pendingDeleteId = null;
+      await loadLeaves();
+    } catch(e) {
+      toast(e.message, 'error');
+    } finally { btn.disabled = false; }
+  });
+
+  // ── Bootstrap ────────────────────────────────────────────────────
+  await initFacultyDropdowns();
+  await loadLeaves();
+</script>
+</body>
+</html>
